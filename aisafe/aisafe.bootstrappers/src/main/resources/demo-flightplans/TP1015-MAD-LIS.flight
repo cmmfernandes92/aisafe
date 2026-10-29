@@ -1,0 +1,48 @@
+flight TP1015 {
+  type: regular
+
+  route {
+    origin: LEMD
+    destination: LPPT
+  }
+
+  leg 1 {
+    departure { airport: LEMD  datetime: __DEPARTURE__ }
+    arrival   { airport: LPPT  datetime: __ARRIVAL__ }
+    fuel: 9000 kg
+    segments {
+      segment {
+        start: (40.4936, -3.5668)
+        end:   (39.6968, -6.0334)
+        slots {
+          slot { altitude: 1000 m  width: 500 m }
+        }
+        wind { direction: 270  speed: 9.0 m/s }
+      }
+      segment {
+        start: (39.6968, -6.0334)
+        end:   (38.9000, -8.5000)
+        slots {
+          slot { altitude: 5500 m  width: 500 m }
+        }
+        wind { direction: 270  speed: 9.0 m/s }
+      }
+      segment {
+        start: (38.9000, -8.5000)
+        end:   (38.8371, -8.8171)
+        slots {
+          slot { altitude: 5500 m  width: 500 m }
+        }
+        wind { direction: 280  speed: 7.5 m/s }
+      }
+      segment {
+        start: (38.8371, -8.8171)
+        end:   (38.7742, -9.1342)
+        slots {
+          slot { altitude: 1 m  width: 500 m }
+        }
+        wind { direction: 280  speed: 7.5 m/s }
+      }
+    }
+  }
+}

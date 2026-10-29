@@ -1,0 +1,100 @@
+@startuml flight-domain-excerpt-for-us080
+title Domain Model Excerpt Relevant to US080 (Create a Flight Plan)
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor      #5B9BD5
+skinparam classFontColor        #1A1A1A
+skinparam packageStyle           rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor     #888888
+skinparam defaultFontSize        11
+hide empty members
+left to right direction
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>>     #95A5A6
+    FontColor<<external>>       #1A1A1A
+}
+
+' ============================================================
+' AGGREGATE: Flight (this US)
+' Flight is the aggregate root; FlightPlan is an entity inside it.
+' US080 creates the Flight together with an initial FlightPlan
+' whose status is DRAFT.
+' ============================================================
+package "Flight Aggregate" {
+    class Flight <<aggregate root>>
+    class FlightDesignator <<value object>>
+
+    abstract class Departure <<value object>>
+    class CharterDeparture <<value object>> {
+        departureDate
+        departureTime
+    }
+    class RegularDeparture <<value object>>
+    class WeekdaySchedule <<value object>> {
+        weekday
+    }
+    class DepartureTime <<value object>>
+
+    class FlightPlan <<entity>> {
+        flightPlanID
+    }
+    enum FlightPlanStatus <<enum>> {
+        DRAFT
+        VALIDATED
+        TESTED
+    }
+
+    CharterDeparture --|> Departure
+    RegularDeparture --|> Departure
+
+    Flight *-- FlightDesignator
+    Flight *-- Departure
+    RegularDeparture *-- "1..*" WeekdaySchedule
+    WeekdaySchedule  *-- "1..*" DepartureTime
+
+    Flight     *-- "1..*" FlightPlan
+    FlightPlan *-- FlightPlanStatus
+}
+
+' ============================================================
+' EXTERNAL AGGREGATES (reference only, grey)
+' Verified at the application layer via their repositories
+' before the Flight is constructed.
+' ============================================================
+package "FlightRoute Aggregate" #EEEEEE {
+    class FlightRoute <<aggregate root>> <<external>>
+}
+package "Aircraft Aggregate" #EEEEEE {
+    class Aircraft <<aggregate root>> <<external>>
+}
+package "Pilot Aggregate" #EEEEEE {
+    class Pilot <<aggregate root>> <<external>>
+}
+package "AirTransportCompany Aggregate" #EEEEEE {
+    class AirTransportCompany <<aggregate root>> <<external>>
+}
+package "AircraftModel Aggregate" #EEEEEE {
+    class AircraftModel <<aggregate root>> <<external>>
+}
+
+' ============================================================
+' CROSS-AGGREGATE RELATIONSHIPS RELEVANT TO US080
+' Only aggregate roots reference one another (root-to-root),
+' even though the certification lives in Pilot's PilotCertification.
+' ============================================================
+Flight --> FlightRoute         : for route
+Flight --> Aircraft            : uses
+Flight --> Pilot              : assigned to
+
+FlightRoute --> AirTransportCompany : belongs to
+Pilot       --> AirTransportCompany : belongs to
+Aircraft    --> AirTransportCompany : belongs to
+
+Aircraft    --> AircraftModel : is of model
+Pilot       --> AircraftModel : certified for
+
+@enduml

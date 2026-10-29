@@ -1,0 +1,34 @@
+@startuml
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+
+package "WeatherData Aggregate" {
+    class WeatherData <<aggregate root>> {
+        weatherDataID
+        recordDate
+        temperature
+        atmosphericPressure
+        visibility
+        dataSource
+    }
+    class WeatherWindSpeed <<value object>>
+    class WeatherWindDirection <<value object>>
+
+    WeatherData *-- WeatherWindSpeed
+    WeatherData *-- WeatherWindDirection
+}
+
+' Cross-aggregate reference
+class AirControlArea <<aggregate root>> #White
+
+WeatherData --> AirControlArea : for area
+
+@enduml

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AISafe - Pilot Operations</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260610-pilot-dashboard">
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar('dashboard', ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Pilot Operations</p>
+          <h1>Flight Plan Workspace</h1>
+          <p class="page-copy">
+            Your flights and where each plan stands in its lifecycle. Import a DSL
+            file to validate a draft, then test it before departure.
+          </p>
+        </div>
+      </header>
+
+      <section class="kpi-grid">
+        <article class="card kpi" th:each="kpi : ${dashboard.kpis()}"
+                 th:classappend="${kpi.warning()} ? ' kpi-warn' : ''">
+          <span th:text="${kpi.label()}">Draft Plans</span>
+          <strong th:text="${kpi.value()}">0</strong>
+          <small th:text="${kpi.caption()}">Awaiting a flight plan</small>
+        </article>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">Plan Lifecycle</p>
+            <h2>Upcoming Flights</h2>
+          </div>
+          <span>Future flights, earliest first</span>
+        </div>
+
+        <div class="lifecycle-board">
+          <!-- DRAFT -->
+          <div class="lifecycle-col">
+            <div class="lifecycle-head">
+              <span class="plan-badge plan-draft">Draft</span>
+              <em th:text="${#lists.size(dashboard.draft())}">0</em>
+            </div>
+            <article class="lifecycle-card" th:each="f : ${dashboard.draft()}">
+              <div class="lifecycle-route mono" th:text="${f.route()}">FR401</div>
+              <div class="lifecycle-meta mono">
+                <span th:text="${f.departure()}">2026-06-12 13:00</span>
+                <span th:text="${f.aircraft()}">CS-MNB</span>
+              </div>
+            </article>
+            <div class="lifecycle-empty" th:if="${#lists.isEmpty(dashboard.draft())}">No drafts.</div>
+          </div>
+
+          <!-- VALIDATED -->
+          <div class="lifecycle-col">
+            <div class="lifecycle-head">
+              <span class="plan-badge plan-validated">Validated</span>
+              <em th:text="${#lists.size(dashboard.validated())}">0</em>
+            </div>
+            <article class="lifecycle-card" th:each="f : ${dashboard.validated()}">
+              <div class="lifecycle-route mono" th:text="${f.route()}">FR401</div>
+              <div class="lifecycle-meta mono">
+                <span th:text="${f.departure()}">2026-06-12 13:00</span>
+                <span th:text="${f.aircraft()}">CS-MNB</span>
+              </div>
+            </article>
+            <div class="lifecycle-empty" th:if="${#lists.isEmpty(dashboard.validated())}">Nothing validated.</div>
+          </div>
+
+          <!-- TESTED -->
+          <div class="lifecycle-col">
+            <div class="lifecycle-head">
+              <span class="plan-badge plan-tested">Tested</span>
+              <em th:text="${#lists.size(dashboard.tested())}">0</em>
+            </div>
+            <article class="lifecycle-card" th:each="f : ${dashboard.tested()}">
+              <div class="lifecycle-route mono" th:text="${f.route()}">FR401</div>
+              <div class="lifecycle-meta mono">
+                <span th:text="${f.departure()}">2026-06-12 13:00</span>
+                <span th:text="${f.aircraft()}">CS-MNB</span>
+              </div>
+            </article>
+            <div class="lifecycle-empty" th:if="${#lists.isEmpty(dashboard.tested())}">Nothing tested.</div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="/js/sidebar.js"></script>
+</body>
+</html>

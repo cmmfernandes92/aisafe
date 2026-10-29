@@ -1,0 +1,28 @@
+<tbody th:fragment="rows(pilots)" id="pilots-tbody">
+  <tr th:each="pilot : ${pilots}">
+    <td class="mono" th:text="${pilot.email()}">pilot@aisafe.test</td>
+    <td class="mono" th:text="${pilot.companyCode()}">TP</td>
+    <td th:text="${pilot.certifications()}">A320, A330</td>
+    <td class="mono" th:text="${pilot.status()}">ACTIVE</td>
+  </tr>
+  <tr th:if="${#lists.isEmpty(pilots)}">
+    <td colspan="4" class="empty">No active pilots registered.</td>
+  </tr>
+</tbody>
+
+<th:block th:fragment="action-result">
+  <div th:class="${success} ? 'alert ok' : 'alert error'" role="status">
+    <span th:text="${message}">Pilot updated.</span>
+  </div>
+  <tbody id="pilots-tbody" hx-swap-oob="true">
+    <tr th:each="pilot : ${pilots}">
+      <td class="mono" th:text="${pilot.email()}">pilot@aisafe.test</td>
+      <td class="mono" th:text="${pilot.companyCode()}">TP</td>
+      <td th:text="${pilot.certifications()}">A320, A330</td>
+      <td class="mono" th:text="${pilot.status()}">ACTIVE</td>
+    </tr>
+    <tr th:if="${#lists.isEmpty(pilots)}">
+      <td colspan="4" class="empty">No active pilots registered.</td>
+    </tr>
+  </tbody>
+</th:block>

@@ -1,0 +1,9 @@
+<div th:fragment="result" th:class="${success} ? 'alert ok weather-import-result' : 'alert error weather-import-result'" role="status">
+  <strong th:text="${message}">Import result</strong>
+  <ul th:if="${errors != null and !#lists.isEmpty(errors)}" class="weather-import-errors">
+    <li th:each="e : ${errors}">
+      <span class="mono" th:text="|[${e.phase()}][${e.code()}] line ${e.line()}:${e.column()}|">[SYNTAX][P001] line 3:7</span>
+      <span th:text="${e.message()}">Unexpected token</span>
+    </li>
+  </ul>
+</div>

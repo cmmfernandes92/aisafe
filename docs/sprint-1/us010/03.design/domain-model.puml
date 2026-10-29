@@ -1,0 +1,533 @@
+@startuml
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+left to right direction
+
+' ============================================
+' AGGREGATE: Maker
+' ============================================
+package "Maker Aggregate" {
+    class Maker <<aggregate root>> {
+        name
+    }
+}
+
+' ============================================
+' AGGREGATE: AircraftModel
+' ============================================
+package "AircraftModel Aggregate" {
+    class AircraftModel <<aggregate root>> {
+        modelID
+        modelName
+        emptyWeight
+        mtow
+        mzfw
+        maxFuelCapacity
+        serviceCeiling
+        cruiseSpeed
+        wingArea
+        dragCoefficient
+        liftCoefficient
+        maximumRange
+    }
+    enum Type <<enum>> {
+        PASSENGER
+        CARGO
+        MIXED
+    }
+    enum MotorizationType <<enum>> {
+        TURBOPROP
+        TURBOFAN
+        TURBOJET
+        RAMJET
+        ELECTRIC_PROPELLER
+    }
+
+    AircraftModel *-- Type
+    AircraftModel *-- MotorizationType
+}
+
+' ============================================
+' AGGREGATE: EngineModel
+' ============================================
+package "EngineModel Aggregate" {
+    class EngineModel <<aggregate root>> {
+        engineModelName
+        power
+        efficiency
+    }
+    enum MotorizationType <<enum>> {
+        TURBOPROP
+        TURBOFAN
+        TURBOJET
+        RAMJET
+        ELECTRIC_PROPELLER
+    }
+    enum FuelType <<enum>> {
+    }
+
+    EngineModel *-- MotorizationType
+    EngineModel *-- FuelType
+}
+
+' ============================================
+' AGGREGATE: User
+' ============================================
+package "User Aggregate" {
+    class User <<aggregate root>> {
+        fullName
+        phoneNumber
+    }
+    class Email <<value object>>
+    class SecurityClearance <<entity>> {
+        expirationDate
+    }
+    class SkillsAssessment <<entity>> {
+        assessmentScore
+    }
+    class AssessmentPeriod <<value object>>
+    enum SystemRole <<enum>> {
+        ADMIN
+        BACKOFFICE_OPERATOR
+        AIR_TRANSPORT_COMPANY_COLLABORATOR
+        PILOT
+        FLIGHT_CONTROL_OPERATOR
+        WEATHER_PERSON
+    }
+    enum UserStatus <<enum>> {
+        ACTIVE
+        DISABLED
+    }
+
+    User *-- Email
+    User *-- SystemRole
+    User *-- UserStatus
+    User *-- "0..1" SecurityClearance : holds
+    User *-- "0..1" SkillsAssessment
+
+    SkillsAssessment *-- AssessmentPeriod
+}
+
+' ============================================
+' AGGREGATE: CompanyCollaborator
+' ============================================
+package "CompanyCollaborator Aggregate" {
+    class CompanyCollaborator <<aggregate root>> {
+        position
+    }
+    enum CollaboratorStatus <<enum>> {
+        ACTIVE
+        DISABLED
+    }
+
+    CompanyCollaborator *-- CollaboratorStatus
+}
+
+' ============================================
+' AGGREGATE: Pilot
+' ============================================
+package "Pilot Aggregate" {
+    class Pilot <<aggregate root>>
+    class PilotCertification <<entity>>
+    enum PilotStatus <<enum>> {
+        ACTIVE
+        INACTIVE
+    }
+
+    Pilot *-- PilotStatus
+    Pilot *-- "1..*" PilotCertification
+}
+
+' ============================================
+' AGGREGATE: Aircraft
+' ============================================
+package "Aircraft Aggregate" {
+    class Aircraft <<aggregate root>> {
+        crewCount
+    }
+    class Registration <<value object>>
+    class CabinConfiguration <<value object>>
+
+    class EconomySeats <<value object>>
+    class BusinessSeats <<value object>>
+    class FirstClassSeats <<value object>>
+    enum OperationalStatus <<enum>> {
+        ACTIVE
+        RETIRED
+    }
+
+    Aircraft *-- Registration
+    Aircraft *-- CabinConfiguration
+    Aircraft *-- OperationalStatus
+
+
+    CabinConfiguration *-- "1" EconomySeats
+    CabinConfiguration *-- "0..1" BusinessSeats
+    CabinConfiguration *-- "0..1" FirstClassSeats
+}
+
+' ============================================
+' AGGREGATE: AirControlArea
+' ============================================
+package "AirControlArea Aggregate" {
+    class AirControlArea <<aggregate root>>
+    class AreaCode <<value object>>
+    class AreaName <<value object>>
+    class GeographicBoundary <<value object>>
+    class Coordinates <<value object>> {
+        latitude
+        longitude
+    }
+
+    AirControlArea *-- AreaCode
+    AirControlArea *-- AreaName
+    AirControlArea *-- GeographicBoundary
+
+    GeographicBoundary *-- "2" Coordinates : SW, NE
+}
+
+' ============================================
+' AGGREGATE: Airport
+' ============================================
+package "Airport Aggregate" {
+    class Airport <<aggregate root>> {
+        airportName
+        town
+        elevation
+    }
+    class AirportIATACode <<value object>>
+    class AirportICAOCode <<value object>>
+    class AirportCoordinates <<value object>>
+
+    Airport *-- AirportIATACode
+    Airport *-- AirportICAOCode
+    Airport *-- AirportCoordinates
+}
+
+' ============================================
+' AGGREGATE: Country
+' ============================================
+package "Country Aggregate" {
+    class Country <<aggregate root>> {
+        name
+    }
+    class CountryCode <<value object>>
+
+
+    Country *-- CountryCode
+}
+
+' ============================================
+' AGGREGATE: AirTransportCompany
+' ============================================
+package "AirTransportCompany Aggregate" {
+    class AirTransportCompany <<aggregate root>> {
+        companyName
+    }
+    class CompanyIATACode <<value object>>
+    class CompanyICAOCode <<value object>>
+
+    AirTransportCompany *-- CompanyIATACode
+    AirTransportCompany *-- CompanyICAOCode
+}
+
+' ============================================
+' AGGREGATE: FlightRoute
+' ============================================
+package "FlightRoute Aggregate" {
+    class FlightRoute <<aggregate root>>
+    class RouteName <<value object>>
+    enum RouteValidity <<enum>> {
+        ACTIVE
+        INACTIVE
+    }
+
+    FlightRoute *-- RouteName
+    FlightRoute *-- RouteValidity
+}
+
+' ============================================
+' AGGREGATE: Flight
+' ============================================
+package "Flight Aggregate" {
+    class Flight <<aggregate root>>
+    class FlightDesignator <<value object>>
+    abstract class Departure <<value object>>
+    class CharterDeparture <<value object>> {
+        departureDate
+        departureTime
+    }
+    class RegularDeparture <<value object>>
+    class WeekdaySchedule <<value object>> {
+        weekday
+    }
+    class DepartureTime <<value object>>
+    class FlightPlan <<entity>> {
+        flightPlanID
+    }
+    class FlightLeg <<entity>>
+    class DepartureInfo <<value object>>
+    class ArrivalInfo <<value object>>
+    class FuelLoad <<value object>>
+    class FlightSegment <<entity>>
+    class Waypoint <<value object>>
+    class Coordinates <<value object>>
+    class AltitudeSlot <<value object>>
+    class WindDirection <<value object>>
+    class WindSpeed <<value object>>
+    enum FlightPlanStatus <<enum>> {
+        DRAFT
+        VALID
+    }
+
+    CharterDeparture --|> Departure
+    RegularDeparture --|> Departure
+    Flight *-- FlightDesignator
+    Flight *-- Departure
+    RegularDeparture *-- "1..*" WeekdaySchedule
+    WeekdaySchedule *-- "1..*" DepartureTime
+
+    Flight *-- "1..*" FlightPlan
+    FlightPlan *-- FlightPlanStatus
+    FlightPlan *-- "1..*" FlightLeg
+
+    FlightLeg *-- DepartureInfo
+    FlightLeg *-- ArrivalInfo
+    FlightLeg *-- FuelLoad
+    FlightLeg *-- "1..*" FlightSegment
+
+    FlightSegment *-- "2" Waypoint : start, end
+    FlightSegment *-- "1..*" AltitudeSlot
+    FlightSegment *-- WindDirection
+    FlightSegment *-- WindSpeed
+
+    Waypoint *-- Coordinates
+}
+
+' ============================================
+' AGGREGATE: WeatherData
+' ============================================
+package "WeatherData Aggregate" {
+    class WeatherData <<aggregate root>> {
+        weatherDataID
+        recordDate
+        temperature
+        atmosphericPressure
+        visibility
+        dataSource
+    }
+    class WeatherWindSpeed <<value object>>
+    class WeatherWindDirection <<value object>>
+
+    WeatherData *-- WeatherWindSpeed
+    WeatherData *-- WeatherWindDirection
+}
+
+' ============================================
+' AGGREGATE: SimulationRun
+' ============================================
+package "SimulationRun Aggregate" {
+    class SimulationRun <<aggregate root>> {
+        simulationID
+        safetyThreshold
+    }
+    class TimeRange <<value object>>
+    class PerformanceSettings <<value object>>
+    class SimulationResult <<entity>>
+    class SafetyViolation <<entity>> {
+        violationTimestamp
+    }
+    class ViolationPosition <<value object>>
+    enum SimulationStatus <<enum>> {
+        CREATED
+        RUNNING
+        COMPLETED
+        FAILED
+    }
+    enum ValidationOutcome <<enum>> {
+        PASS
+        FAIL
+    }
+
+    SimulationRun *-- TimeRange
+    SimulationRun *-- SimulationStatus
+    SimulationRun *-- PerformanceSettings
+    SimulationRun *-- "0..1" SimulationResult
+
+    SimulationResult *-- ValidationOutcome
+    SimulationResult *-- "0..*" SafetyViolation
+
+    SafetyViolation *-- ViolationPosition
+}
+
+' ============================================
+' CROSS-AGGREGATE RELATIONSHIPS
+' ============================================
+
+' Maker connections
+AircraftModel --> Maker : manufactured by
+EngineModel -up-> Maker : manufactured by
+Maker --> Country : based in
+
+' AircraftModel <-> EngineModel
+AircraftModel --> "1..*" EngineModel : certified engines
+' CompanyCollaborator connections
+CompanyCollaborator -up-> AirTransportCompany : belongs to
+CompanyCollaborator --> User : identity
+
+' Pilot connections
+Pilot --> AirTransportCompany : belongs to
+Pilot --> User : identity
+PilotCertification --> AircraftModel : certified for
+
+' Aircraft connections
+Aircraft -up-> AircraftModel : is of model
+Aircraft -up-> EngineModel : uses
+Aircraft --> AirTransportCompany : belongs to
+Aircraft --> Country : registered in
+
+' Airport connections
+Airport --> AirControlArea : located in
+Airport --> Country : located in country
+
+
+' Flight connections
+Flight --> FlightRoute : for route
+Flight --> Aircraft : uses
+Flight --> Pilot : assigned to
+Flight --> AirTransportCompany : belongs to
+DepartureInfo --> Airport : from
+ArrivalInfo --> Airport : to
+
+' FlightRoute connections
+FlightRoute --> "2" Airport : origin, destination
+FlightRoute --> AirTransportCompany : belongs to
+
+' WeatherData connections
+WeatherData --> AirControlArea : for area
+
+' SimulationRun connections
+SimulationRun --> WeatherData : uses weather
+SimulationRun -up-> "1..*" Flight : includes flights
+
+
+' ============================================
+' HIDDEN LINKS (COSMETIC)
+' ============================================
+'CompanyCollaborator -[hidden]left-> RouteValidity
+
+' ============================================
+' INVARIANTS
+' ============================================
+' AircraftModel Aggregate:
+'   - modelName + manufacturer must be unique
+'   - At least one certified engine model
+'   - Engine motorization must be compatible with aircraft motorization
+'
+' EngineModel Aggregate:
+'   - engineModelName + manufacturer must be unique
+'
+' Maker Aggregate:
+'   - name must be unique
+'   - Must reference exactly one Country (country of origin)
+
+'
+' AirTransportCompany Aggregate:
+'   - CompanyIATACode (2 letters) must be unique
+'   - CompanyICAOCode (2-3 letters) must be unique
+'
+' CompanyCollaborator Aggregate:
+'   - Each collaborator belongs to exactly one AirTransportCompany
+'   - Each collaborator references exactly one User
+'   - Disabled collaborators must not appear in collaborator listings
+'   - Only contact data (email, phone) is editable
+'
+' Country Aggregate:
+'   - CountryCode must be unique (stable identifier per §3.1.2)
+'   - name must be unique at any given time
+'   - name is mutable; CountryCode is immutable
+'
+' Pilot Aggregate:
+'   - Each pilot belongs to exactly one AirTransportCompany
+'   - Each pilot references exactly one User
+'   - A pilot must be certified for one or more AircraftModels
+'   - A pilot with assigned FlightPlans cannot be made inactive
+'
+' Aircraft Aggregate:
+'   - Registration must be unique
+'   - Must reference exactly one Country (country of registration)
+'   - Each aircraft belongs to exactly one AirTransportCompany
+'   - Each aircraft is of exactly one AircraftModel
+'   - Selected EngineModel must be certified for the AircraftModel
+'   - Total seats in CabinConfiguration cannot exceed AircraftModel capacity
+'   - Retired aircraft cannot be used to create new flights
+'
+' Flight Aggregate:
+'   - FlightDesignator must be unique (format: xxn(n)(n)(n)(a))
+'   - Flight type is determined by Departure subclass (RegularDeparture vs CharterDeparture)
+'   - CharterDeparture: single departureDate + departureTime
+'   - RegularDeparture: 1..* WeekdaySchedule, each with 1..* DepartureTime
+'   - Aircraft must not be retired
+'   - Pilot must belong to the same company as the route
+'   - Flight must reference exactly one route, one aircraft, one pilot
+'   - Flight belongs to the route's air transport company
+'   - Flight must have at most one VALID FlightPlan
+'   - Leg n arrival airport == Leg n+1 departure airport
+'   - Leg n arrival time < Leg n+1 departure time
+'   - FuelLoad must be strictly positive per leg
+'   - Each leg must have at least one segment
+'   - Segment start and end waypoints must differ
+'   - Altitude values must be positive
+'   - WindDirection must be 0-360
+'   - WindSpeed must be >= 0
+'
+' FlightRoute Aggregate:
+'   - RouteName must be unique (format: 2 letters + up to 4 numbers)
+'   - Route connects exactly two airports (origin != destination)
+'
+' User Aggregate:
+'   - Email must be unique and from the list of valid/allowed email domains (§3.1.1)
+'   - User must have exactly one SystemRole
+'   - UserStatus transitions: ACTIVE <-> DISABLED (by Administrator only)
+'   - SecurityClearance ExpirationDate must be valid (non-expired)
+'   - AssessmentPeriod must not exceed 5 years
+'
+' Airport Aggregate:
+'   - AirportIATACode must be unique worldwide (3 letters)
+'   - AirportICAOCode must be unique worldwide (4 letters)
+'   - AirportCoordinates must be valid
+'   - Must belong to exactly one Country
+'   - Must belong to exactly one AirControlArea
+'
+' AirControlArea Aggregate:
+'   - AreaCode must be unique across the system
+'   - AreaName must be unique across the system
+'   - GeographicBoundary must define a non-zero rectangle (SW strictly less than NE on both axes)
+'   - GeographicBoundary must not overlap with any existing area
+'   - Coordinates VO enforces lat [-90, 90] and lon [-180, 180] at construction
+'
+' WeatherData Aggregate:
+'   - Each record is associated with exactly one AirControlArea
+'   - recordDate must be a valid date
+'   - temperature, atmosphericPressure, visibility must be within valid ranges
+'   - WeatherWindDirection must be 0-360 degrees
+'   - WeatherWindSpeed must be >= 0
+'   - Duplicate records (same area + date + source) not allowed
+'
+' SimulationRun Aggregate:
+'   - Must reference at least one Flight
+'   - TimeRange start must precede end
+'   - safetyThreshold must be positive
+'   - SimulationStatus transitions: CREATED -> RUNNING -> COMPLETED | FAILED
+'   - SimulationResult only present when status is COMPLETED
+'   - ViolationPosition must be valid coordinates
+
+@enduml

@@ -1,0 +1,89 @@
+@startuml sd-us080
+skinparam actorStyle awesome
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+autonumber
+
+title US080 – Create draft flight (realization)
+
+actor "Pilot" as A
+participant ":CreateFlightController" as CTRL <<application>>
+participant ":AuthorizationService" as AUTH <<infrastructure>>
+participant ":FlightRouteRepository" as RR <<persistence>>
+participant ":PilotRepository" as PR <<persistence>>
+participant ":AircraftRepository" as AR <<persistence>>
+participant ":FlightRepository" as FR <<persistence>>
+participant ":FlightCreationService" as SVC <<domain>>
+participant "flight:Flight" as F <<domain>>
+
+activate A
+
+A -> CTRL : createDraftFlight(routeName,\ndeparture, aircraftReg)
+activate CTRL
+
+CTRL -> AUTH : loggedinUserWithPermission(PILOT)
+activate AUTH
+AUTH --> CTRL : pilot session
+deactivate AUTH
+note right of CTRL : T9 – authz at the application layer
+
+CTRL -> RR : ofIdentity(routeName)
+activate RR
+RR --> CTRL : route
+deactivate RR
+
+CTRL -> PR : ofIdentity(currentPilot)
+activate PR
+PR --> CTRL : pilot
+deactivate PR
+
+CTRL -> AR : ofIdentity(aircraftReg)
+activate AR
+AR --> CTRL : aircraft
+deactivate AR
+
+CTRL -> FR : existsForRouteOnDate(route,\ndeparture.localDate())
+activate FR
+FR --> CTRL : false
+deactivate FR
+note right of CTRL : I4 – route+date uniqueness
+
+CTRL -> SVC : createDraft(route, pilot,\naircraft, departure)
+activate SVC
+
+SVC -> SVC : companyCode = route.company().iataCode()
+SVC -> SVC : require route.isActiveOn(departure.localDate())
+SVC -> SVC : require pilot.belongsTo(companyCode)
+SVC -> SVC : require aircraft.belongsTo(companyCode)
+SVC -> SVC : require aircraft.isNotRetired()
+SVC -> SVC : require pilot.isCertifiedFor(aircraft.modelId())
+note right of SVC
+  Preconditions (Preconditions -> IllegalArgumentException):
+    I6  route active on departure date
+    I2  pilot in route's company
+    I3  aircraft in company & not retired
+    I5  pilot certified for aircraft's model
+end note
+
+SVC -> F ** : new Flight(route, pilot,\naircraft, departure)
+activate F
+note right of F
+  FlightPlan initialized to DRAFT (default, I1)
+end note
+F --> SVC : flight
+deactivate F
+
+SVC --> CTRL : flight
+deactivate SVC
+
+CTRL -> FR : save(flight)
+activate FR
+note right of FR : single-aggregate write – no shared Tx (TP6)
+FR --> CTRL : flight
+deactivate FR
+
+CTRL --> A : flightDesignator
+
+deactivate A
+
+@enduml

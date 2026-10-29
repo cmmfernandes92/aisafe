@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<header th:fragment="topbar(username, currentModule, modules)" class="topbar">
+  <a class="brand" id="brand-block" th:href="${currentModule.homePath()}">
+    <img class="brand-logo" src="/img/logo.png" alt="AISafe logo">
+    <strong class="brand-text"><i>AI</i>Safe</strong>
+  </a>
+  <button id="sidebar-toggle" class="sidebar-toggle" title="Toggle sidebar" aria-label="Toggle sidebar">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <rect x="1.5" y="2" width="11" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+      <line x1="5" y1="2.5" x2="5" y2="11.5" stroke="currentColor" stroke-width="1.2"/>
+    </svg>
+  </button>
+  <div class="module-switcher" th:if="${#lists.size(modules) > 1}">
+    <details>
+      <summary>
+        <span th:text="${currentModule.label()}">Backoffice</span>
+      </summary>
+      <div class="module-menu">
+        <a th:each="module : ${modules}"
+           th:href="${module.href()}"
+           th:classappend="${module.active()} ? 'active'"
+           th:text="${module.label()}">Backoffice</a>
+      </div>
+    </details>
+  </div>
+  <div class="breadcrumb" th:if="${#lists.size(modules) <= 1}">
+    <b th:text="${currentModule.label()}">Backoffice</b>
+  </div>
+  <div class="topbar-right">
+    <span class="status-dot"></span>
+    <span class="role">System Nominal</span>
+    <span class="username" th:text="${username}">operator</span>
+    <form action="/logout" method="post" hx-post="/logout">
+      <button type="submit">Logout</button>
+    </form>
+  </div>
+</header>
+
+<aside th:fragment="sidebar(active, currentModule, navItems)" id="sidebar" class="sidebar">
+  <nav>
+    <div class="nav-section" th:text="${currentModule.label()}">Navigation</div>
+    <a th:each="item : ${navItems}"
+       th:href="${item.enabled()} ? ${item.href()} : '#'"
+       th:class="'nav-row' + (${item.active()} ? ' active' : '') + (${item.enabled()} ? '' : ' disabled')"
+       th:title="${item.label()}">
+      <span class="nav-icon" th:classappend="${item.iconClass()}"></span>
+      <span class="nav-label" th:text="${item.label()}">Dashboard</span>
+    </a>
+  </nav>
+  <div class="sidebar-note">
+    <span></span>
+    <p th:text="${currentModule.description()}">Live operational catalogue.</p>
+  </div>
+</aside>
+</body>
+</html>

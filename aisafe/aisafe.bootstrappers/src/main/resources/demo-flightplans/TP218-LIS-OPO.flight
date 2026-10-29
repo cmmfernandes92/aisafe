@@ -1,0 +1,48 @@
+flight TP218 {
+  type: regular
+
+  route {
+    origin: LPPT
+    destination: LPPR
+  }
+
+  leg 1 {
+    departure { airport: LPPT  datetime: __DEPARTURE__ }
+    arrival   { airport: LPPR  datetime: __ARRIVAL__ }
+    fuel: 7000 kg
+    segments {
+      segment {
+        start: (38.7742, -9.1342)
+        end:   (39.3871, -8.8671)
+        slots {
+          slot { altitude: 1000 m  width: 500 m }
+        }
+        wind { direction: 310  speed: 6.0 m/s }
+      }
+      segment {
+        start: (39.3871, -8.8671)
+        end:   (40.0000, -8.6000)
+        slots {
+          slot { altitude: 4500 m  width: 500 m }
+        }
+        wind { direction: 310  speed: 6.0 m/s }
+      }
+      segment {
+        start: (40.0000, -8.6000)
+        end:   (40.6178, -8.63905)
+        slots {
+          slot { altitude: 4500 m  width: 500 m }
+        }
+        wind { direction: 300  speed: 6.5 m/s }
+      }
+      segment {
+        start: (40.6178, -8.63905)
+        end:   (41.2356, -8.6781)
+        slots {
+          slot { altitude: 1 m  width: 500 m }
+        }
+        wind { direction: 300  speed: 6.5 m/s }
+      }
+    }
+  }
+}

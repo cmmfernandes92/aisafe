@@ -1,0 +1,175 @@
+@startuml class-diagram-us078
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 13
+skinparam roundcorner 8
+skinparam classBackgroundColor #FEFEFE
+skinparam classBorderColor #AAAAAA
+skinparam arrowColor #555555
+
+package "eapli.aisafe.app.atcc.console" {
+
+    class AtccApp {
+        + {static} main(args : String[]) : void
+        # doMain(args : String[]) : void
+        # appTitle() : String
+        # appGoodbye() : String
+        # doSetupEventHandlers(d : EventDispatcher) : void
+    }
+
+}
+
+package "eapli.aisafe.app.atcc.console.infrastructure.tcp" {
+
+    class AtccTcpServer implements Runnable {
+        - port : int
+        - serverSocket : ServerSocket
+        + AtccTcpServer()
+        + run() : void
+        + stop() : void
+        ~ createServerSocket(p : int) : ServerSocket
+    }
+
+    class AtccConnectionHandler implements Runnable {
+        - clientSocket : Socket
+        - credentialHandler : CredentialHandler
+        - sessionContext : AtccSessionContext
+        + AtccConnectionHandler(clientSocket : Socket)
+        ~ AtccConnectionHandler(clientSocket, credentialHandler, sessionContext)
+        + run() : void
+        ~ handleSession(in : DataInputStream, out : DataOutputStream) : void
+        ~ dispatch(commandCode : byte, in, out) : void
+        - handleAddAircraft(in, out) : void
+        - handleDecommissionAircraft(in, out) : void
+        - handleListFleet(in, out) : void
+        - handleCreateFlightRoute(in, out) : void
+        - handleDeactivateFlightRoute(in, out) : void
+        - handleAddPilot(in, out) : void
+        - handleListPilots(in, out) : void
+        - handleDeactivatePilot(in, out) : void
+        - sendOk(out) : void
+        ~ sendError(out, msg : String) : void
+        - sendData(out, data : String) : void
+        - writeString(out, s : String) : void
+        - readString(in) : String
+        ~ readFully(in, buf, off, len) : void
+    }
+
+    interface AtccSessionContext <<interface>> {
+        + addAircraft(reg, modelId, seats, country) : Aircraft
+        + decommissionAircraft(registration) : Aircraft
+        + listFleet() : List<AircraftDTO>
+        + createFlightRoute(routeName, originCode, destCode) : FlightRoute
+        + deactivateFlightRoute(routeName, effectiveDate) : FlightRoute
+        + addPilot(pilotEmail, modelIds) : Pilot
+        + listPilots() : Iterable<Pilot>
+        + deactivatePilot(pilotEmail) : void
+    }
+
+    class DefaultAtccSessionContext implements AtccSessionContext
+
+}
+
+package "eapli.aisafe.app.atcc.console.infrastructure.tcp.protocol" {
+
+    class AtccProtocol <<constants>> {
+        + {static} PORT : int = 6666
+        + {static} LOGIN : byte = 0x01
+        + {static} LOGOUT : byte = 0x02
+        + {static} ADD_AIRCRAFT : byte = 0x03
+        + {static} DECOMMISSION_AIRCRAFT : byte = 0x04
+        + {static} LIST_FLEET : byte = 0x05
+        + {static} CREATE_FLIGHT_ROUTE : byte = 0x06
+        + {static} DEACTIVATE_FLIGHT_ROUTE : byte = 0x07
+        + {static} ADD_PILOT : byte = 0x08
+        + {static} LIST_PILOTS : byte = 0x09
+        + {static} DEACTIVATE_PILOT : byte = 0x0A
+        + {static} RESPONSE_OK : byte = 0xF0
+        + {static} RESPONSE_ERROR : byte = 0xF1
+        + {static} RESPONSE_DATA : byte = 0xF2
+    }
+
+}
+
+package "eapli.aisafe.app.atcc.console.infrastructure.tcp.client" {
+
+    class AtccRemoteClient {
+        - scanner : Scanner
+        - output : PrintStream
+        + {static} main(args : String[]) : void
+        ~ connect(host : String, port : int) : void
+        ~ run(in : DataInputStream, out : DataOutputStream) : void
+        - sendLogin(out, in, username, password) : boolean
+        - runMenu(out, in) : void
+        - writeString(out, s : String) : void
+        - readString(in) : String
+        - readFully(in, buf, off, len) : void
+    }
+
+}
+
+package "eapli.aisafe.fleetmanagement.application" {
+    class "AircraftDTO" as DTO <<record>> #FFFACD {
+        + registration : String
+        + modelName : String
+        + status : String
+        + capacity : int
+    }
+    class AddAircraftController
+    class DecommissionAircraftController
+    class ListCompanyFleetController
+}
+
+package "eapli.aisafe.flightroutemanagement.application" {
+    class CreateFlightRouteController
+    class DeactivateFlightRouteController
+}
+
+package "eapli.aisafe.pilotmanagement.application" {
+    class AddPilotController
+    class ListPilotController
+    class DeactivatePilotController
+}
+
+package "eapli.aisafe.infrastructure.authz" {
+    interface CredentialHandler {
+        + authenticated(username, password, roles) : boolean
+    }
+    class AuthenticationCredentialHandler implements CredentialHandler
+}
+
+' Relationships
+AtccApp ..> AtccTcpServer : "starts as daemon Thread"
+AtccTcpServer ..> AtccConnectionHandler : "instantiates per connection"
+AtccConnectionHandler ..> AtccProtocol : "uses command codes"
+AtccConnectionHandler --> CredentialHandler : "authenticates via"
+AtccConnectionHandler --> AtccSessionContext : "delegates business ops"
+
+DefaultAtccSessionContext ..> AddAircraftController : "for ADD_AIRCRAFT"
+DefaultAtccSessionContext ..> DecommissionAircraftController : "for DECOMMISSION_AIRCRAFT"
+DefaultAtccSessionContext ..> ListCompanyFleetController : "for LIST_FLEET"
+DefaultAtccSessionContext ..> CreateFlightRouteController : "for CREATE_FLIGHT_ROUTE"
+DefaultAtccSessionContext ..> DeactivateFlightRouteController : "for DEACTIVATE_FLIGHT_ROUTE"
+DefaultAtccSessionContext ..> AddPilotController : "for ADD_PILOT"
+DefaultAtccSessionContext ..> ListPilotController : "for LIST_PILOTS"
+DefaultAtccSessionContext ..> DeactivatePilotController : "for DEACTIVATE_PILOT"
+DefaultAtccSessionContext ..> DTO : "produces for LIST_FLEET"
+
+AtccRemoteClient ..> AtccProtocol : "uses command codes"
+
+note bottom of AtccSessionContext
+    Seam for testability: AtccConnectionHandler depends on
+    this interface so unit tests can inject a fake context
+    instead of hitting real controllers / persistence.
+end note
+
+note bottom of DTO
+    AircraftDTO: the only DTO needed.
+    ListCompanyFleetController returns FleetEntry
+    (Aircraft + AircraftModel). Converting to a DTO
+    here prevents any domain object from crossing
+    the process boundary (wire), per the DTO pattern
+    taught in EAPLI TP9.
+end note
+
+@enduml

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title th:text="'AISafe - Monthly Report – ' + ${periodLabel}">AISafe - Monthly Report</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260604-report">
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar('monthly-report', ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+
+      <!-- ── Page header + period picker ─────────────────────────────── -->
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Flight Control</p>
+          <h1>Monthly Statistics Report</h1>
+          <p class="page-copy">Aggregated flight, safety, and simulation statistics for the selected month.</p>
+        </div>
+        <form method="get" th:action="@{/modules/flight-control/monthly-report}"
+              style="display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap;">
+          <div style="display:flex;flex-direction:column;gap:.25rem;">
+            <label style="font-size:.75rem;color:#8b949e;">Year</label>
+            <input type="number" name="year" th:value="${year}"
+                   min="2000" max="2099" style="width:90px;"
+                   class="mono" required>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:.25rem;">
+            <label style="font-size:.75rem;color:#8b949e;">Month</label>
+            <select name="month" class="mono">
+              <option th:each="entry : ${monthNames}"
+                      th:value="${entry.key}"
+                      th:text="${entry.value}"
+                      th:selected="${entry.key == month}">Month</option>
+            </select>
+          </div>
+          <button type="submit" class="btn-primary">Generate</button>
+          <a th:href="@{/modules/flight-control/monthly-report/download(year=${year},month=${month})}"
+             class="btn-primary" style="background:#10b981;">&#8595; Download HTML</a>
+        </form>
+        <form th:action="@{/modules/flight-control/monthly-report/save-to-docs}"
+              method="post" style="margin-top:.5rem;">
+          <input type="hidden" name="year"  th:value="${year}">
+          <input type="hidden" name="month" th:value="${month}">
+          <button type="submit" class="btn-primary" style="background:#8b5cf6;">
+            &#128190; Save to docs/sprint-3/us112/
+          </button>
+        </form>
+      </header>
+
+      <!-- flash messages -->
+      <div th:if="${saveSuccess}" class="card" style="background:#10b98122;border-color:#10b981;margin-bottom:.5rem;">
+        <p style="color:#10b981;" th:text="${saveSuccess}">Saved.</p>
+      </div>
+      <div th:if="${saveError}" class="card" style="background:#ef444422;border-color:#ef4444;margin-bottom:.5rem;">
+        <p style="color:#ef4444;" th:text="${saveError}">Error.</p>
+      </div>
+
+      <!-- ── KPI bar ─────────────────────────────────────────────────── -->
+      <section class="kpi-grid">
+        <article class="card kpi">
+          <span>Total Flights</span>
+          <strong th:text="${totalFlights}" style="color:#10b981;">0</strong>
+          <small th:text="${periodLabel}">Period</small>
+        </article>
+        <article class="card kpi">
+          <span>Safety Violations</span>
+          <strong th:text="${totalViolations}"
+                  th:style="${totalViolations > 0} ? 'color:#ef4444' : 'color:#10b981'">0</strong>
+          <small th:text="${periodLabel}">Period</small>
+        </article>
+        <article class="card kpi">
+          <span>Simulations Run</span>
+          <strong th:text="${totalSimulations}" style="color:#3b82f6;">0</strong>
+          <small th:text="${periodLabel}">Period</small>
+        </article>
+        <article class="card kpi">
+          <span>Routes Active</span>
+          <strong th:text="${routeCount}" style="color:#f59e0b;">0</strong>
+          <small>Top routes</small>
+        </article>
+        <article class="card kpi">
+          <span>Companies</span>
+          <strong th:text="${companyCount}" style="color:#8b5cf6;">0</strong>
+          <small>With flights</small>
+        </article>
+      </section>
+
+      <!-- ── Charts grid ─────────────────────────────────────────────── -->
+      <section class="grid-two" style="margin-top:1.25rem;">
+
+        <!-- Chart 1 — Routes -->
+        <article class="card">
+          <div class="card-head">
+            <h2>Most-Used Routes</h2>
+            <span th:text="${periodLabel}">Period</span>
+          </div>
+          <canvas id="chartRoutes" style="max-height:320px;"></canvas>
+        </article>
+
+        <!-- Chart 2 — Companies -->
+        <article class="card">
+          <div class="card-head">
+            <h2>Companies with Most Flights</h2>
+            <span th:text="${periodLabel}">Period</span>
+          </div>
+          <canvas id="chartCompanies" style="max-height:320px;"></canvas>
+        </article>
+
+      </section>
+      <section class="grid-two" style="margin-top:1.25rem;">
+
+        <!-- Chart 3 — Violations by area -->
+        <article class="card">
+          <div class="card-head">
+            <h2>Safety Violations by Area</h2>
+            <span th:text="${periodLabel}">Period</span>
+          </div>
+          <canvas id="chartViolations" style="max-height:300px;"></canvas>
+        </article>
+
+        <!-- Chart 4 — Monthly evolution -->
+        <article class="card">
+          <div class="card-head">
+            <h2>Monthly Evolution</h2>
+            <span>Last 6 months</span>
+          </div>
+          <canvas id="chartEvolution" style="max-height:300px;"></canvas>
+        </article>
+
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ── Chart data (Thymeleaf → JS) ──────────────────────────────────── -->
+  <script th:inline="javascript">
+    const routeLabels   = /*[[${routeLabels}]]*/ [];
+    const routeData     = /*[[${routeData}]]*/ [];
+    const routeColors   = /*[[${routeColors}]]*/ [];
+
+    const companyLabels = /*[[${companyLabels}]]*/ [];
+    const companyData   = /*[[${companyData}]]*/ [];
+    const companyColors = /*[[${companyColors}]]*/ [];
+
+    const areaLabels    = /*[[${areaLabels}]]*/ [];
+    const areaData      = /*[[${areaData}]]*/ [];
+
+    const evoLabels     = /*[[${evolutionLabels}]]*/ [];
+    const evoFlights    = /*[[${evolutionFlights}]]*/ [];
+    const evoViolations = /*[[${evolutionViolations}]]*/ [];
+
+    const GRID = '#30363d';
+    const TICK = '#8b949e';
+
+    // Chart 1 — Routes (horizontal bar)
+    new Chart(document.getElementById('chartRoutes'), {
+      type: 'bar',
+      data: {
+        labels: routeLabels,
+        datasets: [{ label: 'Flights', data: routeData, backgroundColor: routeColors, borderRadius: 6 }]
+      },
+      options: {
+        indexAxis: 'y',
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: TICK }, grid: { color: GRID } },
+          y: { ticks: { color: TICK }, grid: { color: GRID } }
+        }
+      }
+    });
+
+    // Chart 2 — Companies (doughnut)
+    new Chart(document.getElementById('chartCompanies'), {
+      type: 'doughnut',
+      data: {
+        labels: companyLabels,
+        datasets: [{ data: companyData, backgroundColor: companyColors }]
+      },
+      options: {
+        cutout: '55%',
+        plugins: { legend: { position: 'right', labels: { color: '#c9d1d9' } } }
+      }
+    });
+
+    // Chart 3 — Violations by area (bar)
+    new Chart(document.getElementById('chartViolations'), {
+      type: 'bar',
+      data: {
+        labels: areaLabels,
+        datasets: [{
+          label: 'Violations', data: areaData,
+          backgroundColor: '#ef444499', borderColor: '#ef4444', borderWidth: 1, borderRadius: 6
+        }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: TICK }, grid: { color: GRID } },
+          y: { beginAtZero: true, ticks: { color: TICK }, grid: { color: GRID } }
+        }
+      }
+    });
+
+    // Chart 4 — Evolution (dual-axis line)
+    new Chart(document.getElementById('chartEvolution'), {
+      type: 'line',
+      data: {
+        labels: evoLabels,
+        datasets: [
+          { label: 'Flights',    data: evoFlights,    borderColor: '#3b82f6',
+            backgroundColor: '#3b82f622', fill: true,  tension: 0.4, yAxisID: 'yFlights' },
+          { label: 'Violations', data: evoViolations, borderColor: '#ef4444',
+            fill: false, borderDash: [5,5], tension: 0.4, yAxisID: 'yViolations' }
+        ]
+      },
+      options: {
+        interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { labels: { color: '#c9d1d9' } } },
+        scales: {
+          x: { ticks: { color: TICK }, grid: { color: GRID } },
+          yFlights:    { type: 'linear', position: 'left',  ticks: { color: '#3b82f6' }, grid: { color: GRID },
+                         title: { display: true, text: 'Flights',    color: '#3b82f6' } },
+          yViolations: { type: 'linear', position: 'right', ticks: { color: '#ef4444' }, grid: { drawOnChartArea: false },
+                         title: { display: true, text: 'Violations', color: '#ef4444' } }
+        }
+      }
+    });
+  </script>
+
+  <script src="/js/sidebar.js"></script>
+</body>
+</html>

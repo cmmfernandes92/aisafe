@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AISafe - Pilots</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260614-atcc-pilots">
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar('pilots', ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">US075 / US076 / US077</p>
+          <h1>Pilots</h1>
+          <p class="page-copy">Company pilot roster with certified aircraft models and operational status.</p>
+        </div>
+      </header>
+
+      <section class="areas-grid">
+        <article th:replace="~{fragments/table-card :: card(
+            'Active Pilots',
+            '/modules/air-transport-company/pilots/table',
+            '#pilots-tbody',
+            'Refresh pilots',
+            ~{::#pilots-head},
+            ~{fragments/atcc-pilots :: rows(${snapshot.pilots()})})}">
+          <thead id="pilots-head">
+          <tr>
+            <th>Email</th>
+            <th>Company</th>
+            <th>Certified Models</th>
+            <th>Status</th>
+          </tr>
+          </thead>
+        </article>
+
+        <aside class="stack">
+          <div id="pilot-action-result"></div>
+
+          <section class="card form-card">
+            <div class="card-head">
+              <h2>Add Pilot</h2>
+              <span>US075</span>
+            </div>
+            <form hx-post="/modules/air-transport-company/pilots"
+                  hx-target="#pilot-action-result"
+                  hx-swap="innerHTML"
+                  class="stack">
+              <label>
+                <span>Pilot User</span>
+                <select name="pilotEmail" required>
+                  <option value="">Select pilot user</option>
+                  <option th:each="user : ${snapshot.pilotUsers()}"
+                          th:value="${user.email()}"
+                          th:text="|${user.email()} - ${user.phoneNumber()}|">pilot@aisafe.test</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Certified Aircraft Models <small>(Ctrl/Cmd for multi-select)</small></span>
+                <select name="modelIds" multiple required size="5">
+                  <option th:each="model : ${snapshot.models()}"
+                          th:value="${model.id()}"
+                          th:text="|[${model.id()}] ${model.modelName()} - ${model.makerName()}|">[1] A320 - Airbus</option>
+                </select>
+              </label>
+
+              <button type="submit">Add Pilot</button>
+            </form>
+          </section>
+
+          <section class="card form-card">
+            <div class="card-head">
+              <h2>Deactivate Pilot</h2>
+              <span>US077</span>
+            </div>
+            <form hx-post="/modules/air-transport-company/pilots/deactivate"
+                  hx-target="#pilot-action-result"
+                  hx-swap="innerHTML"
+                  class="stack">
+              <label>
+                <span>Pilot Email</span>
+                <input name="pilotEmail" required maxlength="128" placeholder="pilot@aisafe.test">
+              </label>
+
+              <button type="submit">Deactivate Pilot</button>
+            </form>
+          </section>
+        </aside>
+      </section>
+    </main>
+  </div>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/sortable-table.js"></script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+@startuml
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+autonumber
+
+title Create a Flight including Flight Plan (US080)
+
+actor "Pilot" as A
+participant ":CreateFlightPlanUI" as UI <<presentation>>
+participant ":CreateFlightPlanController" as CTRL <<application>>
+participant ":AuthorizationService" as AUTH <<infrastructure>>
+participant ":PilotRepository" as PR <<persistence>>
+participant ":FlightRouteRepository" as RR <<persistence>>
+participant ":AircraftRepository" as AR <<persistence>>
+participant ":Flight" as F <<domain>>
+participant ":FlightRepository" as FR <<persistence>>
+
+activate A
+
+A -> UI : asks to create\na flight plan
+activate UI
+
+UI -> CTRL : create()
+activate CTRL
+
+CTRL -> AUTH : loggedUser()
+activate AUTH
+AUTH --> CTRL : userSession
+deactivate AUTH
+
+CTRL -> PR : findByUser(userSession)
+activate PR
+PR --> CTRL : pilot
+deactivate PR
+
+CTRL --> UI : pilot resolved
+deactivate UI
+
+A -> UI : requests available routes
+activate UI
+
+UI -> CTRL : getRoutes()
+
+CTRL -> RR : findActiveByCompany(company)
+activate RR
+RR --> CTRL : routes
+deactivate RR
+
+CTRL --> UI : routes
+deactivate UI
+
+A -> UI : selects route
+activate UI
+
+UI -> CTRL : getAircraft()
+
+CTRL -> AR : findActiveByCompany(company)
+activate AR
+AR --> CTRL : aircraft list
+deactivate AR
+
+CTRL --> UI : aircraft list
+deactivate UI
+
+A -> UI : selects aircraft, provides\ndeparture info and plan data\n(legs, segments, fuel)
+activate UI
+
+UI -> CTRL : registerFlightPlan(route, aircraft,\ndepartureData, planData)
+
+CTRL -> F ** : create(route, pilot, aircraft,\ndepartureData)
+activate F
+F -> F : addFlightPlan(planData)\n[status = DRAFT]
+note right of F
+  Validates (Information Expert):
+  - designator format xxn(n)(n)(n)(a)
+  - aircraft not retired
+  - pilot belongs to route's company
+  - at most one VALID plan
+end note
+deactivate F
+
+CTRL -> FR : save(flight)
+activate FR
+FR --> CTRL : flight
+deactivate FR
+
+CTRL --> UI : flight
+deactivate UI
+
+UI --> A : shows created flight\nwith plan (DRAFT)
+
+deactivate CTRL
+
+deactivate A
+
+@enduml

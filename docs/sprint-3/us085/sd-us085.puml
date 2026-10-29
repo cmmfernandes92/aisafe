@@ -1,0 +1,116 @@
+@startuml sd-us085
+skinparam actorStyle awesome
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+autonumber
+
+title US085 – Test/validate a flight plan (realization)
+
+actor "Pilot" as A
+participant ":TestFlightPlanUI" as UI <<presentation>>
+participant ":TestFlightPlanController" as CTRL <<application>>
+participant ":AuthorizationService" as AUTH <<infrastructure>>
+participant ":FlightRepository" as FR <<persistence>>
+participant "flight:Flight" as F <<domain>>
+participant "plan:FlightPlan" as P <<domain>>
+participant "service:SimulatorV1FlightPlanTestService" as SVC <<application>>\n<<FlightPlanTestService (Strategy)>>
+participant "compiler:FlightPlanCompiler" as CMP <<port / adapter>>
+participant ":WindResolver" as WR <<application>>
+participant "FuelBurnModel" as FB <<domain::physics>>
+
+activate A
+A -> UI : route, departure date
+activate UI
+UI -> CTRL : testFlightPlan(flightId)
+activate CTRL
+
+CTRL -> AUTH : ensureAuthenticatedUserHasAnyOf(PILOT)
+activate AUTH
+AUTH --> CTRL : pilot session
+deactivate AUTH
+note right of CTRL : R8 – authz + ownership at the application layer
+
+CTRL -> FR : ofIdentity(flightId)
+activate FR
+FR --> CTRL : flight
+deactivate FR
+
+CTRL -> F : testCurrentPlan(testService)
+activate F
+F -> P : isValidated()
+activate P
+P --> F : true
+deactivate P
+note right of F : R4 – only a VALIDATED plan can be tested
+
+F -> SVC : test(flight, plan)
+activate SVC
+
+SVC -> CMP : compile(plan.rawDslContent())
+activate CMP
+note right of CMP
+  US120 lexical/syntactic/semantic analysis (R1).
+  Adapter keeps aisafe.core DSL-unaware (Separated Interface).
+end note
+CMP --> SVC : FlightPlanCompilationResult\n(ParsedFlightPlan | issues)
+deactivate CMP
+
+alt DSL did not compile (R1 / US085.4)
+    SVC --> F : FlightPlanTestResult.failure(issues with type+location)
+else DSL ok
+    SVC -> P : weatherAssignmentsBySegment()
+    activate P
+    P --> SVC : Map<SegmentKey, WeatherDataId>
+    deactivate P
+
+    SVC -> WR : resolve(parsed, assignments)
+    activate WR
+    note right of WR
+      R7 – left join SegmentKey → attached forecast,
+      DSL baseline fallback, knots→m/s
+    end note
+    WR --> SVC : List<ResolvedSegment>
+    deactivate WR
+
+    SVC -> SVC : assembleAircraft(flight) → AircraftPhysics
+    note right of SVC
+      reads Aircraft / AircraftModel / EngineModel
+      (deterministic min-by-name certified engine)
+    end note
+
+    SVC -> FB : integrate(aircraft, segments, loadedFuelKg, blockSeconds)
+    activate FB
+    note right of FB : §3.3 Euler burn  P·Δt·TSFC/g  over ISA atmosphere
+    FB --> SVC : FuelBurnResult (trip burn, remaining, timeline)
+    deactivate FB
+
+    SVC -> SVC : evaluate – R6 departure, R3 altitude, R2 fuel → verdict
+    SVC --> F : FlightPlanTestResult (success | failure)
+end
+deactivate SVC
+
+alt verdict passed (R3/US085.3)
+    F -> P : markTested()
+    activate P
+    note right of P : VALIDATED → TESTED (Invariant guard, R4)
+    P --> F
+    deactivate P
+end
+F --> CTRL : FlightPlanTestResult
+deactivate F
+
+alt success
+    CTRL -> FR : save(flight)
+    activate FR
+    note right of FR : persisted ONLY on success – R5 (failed test leaves state untouched)
+    FR --> CTRL
+    deactivate FR
+end
+
+CTRL --> UI : FlightPlanTestResult
+deactivate CTRL
+UI --> A : verdict (TESTED, or reasons)
+deactivate UI
+deactivate A
+
+@enduml

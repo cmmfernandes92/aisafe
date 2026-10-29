@@ -1,0 +1,7 @@
+<div th:fragment="validation" th:class="${valid} ? 'field-note ok' : 'field-note error'">
+  <span th:text="${message}">Validation message</span>
+</div>
+
+<div th:fragment="result" th:class="${success} ? 'alert ok' : 'alert error'" role="status">
+  <span th:text="${message}">Result message</span>
+</div>

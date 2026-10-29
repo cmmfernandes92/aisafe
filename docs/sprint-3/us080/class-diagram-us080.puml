@@ -1,0 +1,156 @@
+@startuml class-diagram-us080
+title US080 – Create draft flight (design)
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>> #95A5A6
+    FontColor<<external>> #1A1A1A
+}
+
+' ============================================
+' PRESENTATION (aisafe.app.pilot.console)
+' ============================================
+package "Presentation" {
+    class CreateFlightUI {
+        + doShow() : boolean
+    }
+}
+
+' ============================================
+' APPLICATION (aisafe.core)
+' ============================================
+package "Application" {
+    class CreateFlightController <<UseCaseController>> {
+        + createDraftFlight(routeName, departure,\naircraftReg) : FlightDesignator
+    }
+}
+
+' ============================================
+' DOMAIN SERVICE (aisafe.core) – T4
+' ============================================
+package "Domain Service" {
+    class FlightCreationService <<DomainService>> {
+        + createDraft(route, pilot, aircraft,\ndeparture) : Flight
+    }
+}
+
+' ============================================
+' DOMAIN – Flight Aggregate (aisafe.core)
+' ============================================
+package "Domain" {
+    class Flight <<aggregate root>> {
+        - designator : FlightDesignator
+        / company : derived from route
+        + hasValidatedPlan() : boolean
+        + validatePlan(id) : void
+    }
+    class FlightPlan <<entity>> {
+        - status : FlightPlanStatus = DRAFT
+    }
+    enum FlightPlanStatus <<enum>> {
+        DRAFT
+        VALIDATED
+        TESTED
+    }
+    interface FlightRepository {
+        + save(Flight) : Flight
+        + existsForRouteOnDate(route, date) : boolean
+    }
+
+    ' Referenced aggregates – read-only, resolved at the application layer
+    class FlightRoute <<aggregate root>> <<external>> {
+        + company() : AirTransportCompany
+        + isActiveOn(date) : boolean
+    }
+    class Pilot <<aggregate root>> <<external>> {
+        + belongsTo(CompanyIATACode) : boolean
+        + isCertifiedFor(modelId) : boolean
+    }
+    class Aircraft <<aggregate root>> <<external>> {
+        + companyCode() : CompanyIATACode
+        + belongsTo(CompanyIATACode) : boolean
+        + isNotRetired() : boolean
+        + modelId() : Long
+    }
+    class AirTransportCompany <<aggregate root>> <<external>> {
+        + iataCode() : CompanyIATACode
+    }
+    class AircraftModel <<aggregate root>> <<external>>
+
+    interface FlightRouteRepository <<external>>
+    interface PilotRepository <<external>>
+    interface AircraftRepository <<external>>
+}
+
+' ============================================
+' INFRASTRUCTURE (eapli.framework)
+' ============================================
+package "Infrastructure" {
+    class AuthorizationService <<external>> {
+        + loggedinUserWithPermission(role) : SystemUser
+    }
+}
+
+' ============================================
+' Relationships
+' ============================================
+CreateFlightUI ..> CreateFlightController : uses
+
+CreateFlightController ..> AuthorizationService : gets logged-in pilot
+CreateFlightController ..> FlightRouteRepository : resolves route
+CreateFlightController ..> PilotRepository : resolves pilot
+CreateFlightController ..> AircraftRepository : resolves aircraft
+CreateFlightController ..> FlightRepository : save / uniqueness (I4)
+CreateFlightController ..> FlightCreationService : delegates decision
+
+FlightCreationService ..> Flight : <<creates>>
+FlightCreationService ..> FlightRoute
+FlightCreationService ..> Pilot
+FlightCreationService ..> Aircraft
+
+Flight *-- "1..*" FlightPlan
+FlightPlan *-- FlightPlanStatus
+
+Flight ..> FlightRoute : for route
+Flight ..> Pilot : assigned to
+Flight ..> Aircraft : uses
+FlightRoute ..> AirTransportCompany : belongs to
+Pilot ..> AirTransportCompany : belongs to
+Aircraft ..> AirTransportCompany : belongs to
+Aircraft ..> AircraftModel : is of model
+Pilot ..> AircraftModel : certified for
+
+note bottom of FlightRepository
+  DIP (T5/T7): repository interfaces owned by the
+  domain, implemented in persistence, injected
+  at the console (Dependency Injection).
+end note
+
+note right of FlightCreationService
+  Factory (GoF/DDD): assembles the Flight with its
+  initial DRAFT FlightPlan.
+  Validates the cross-aggregate **preconditions**
+  (I2, I3, I5, I6) on its inputs
+  (Preconditions -> IllegalArgumentException) –
+  an operation no single aggregate owns (T4).
+end note
+
+note bottom of Flight
+  Per-object rules:
+  - FlightPlan initialized to DRAFT (default, I1)
+  - Flight invariant "<= 1 VALIDATED plan" (Invariants
+    -> IllegalStateException), enforced on validatePlan;
+    not exercised at draft creation.
+end note
+
+@enduml

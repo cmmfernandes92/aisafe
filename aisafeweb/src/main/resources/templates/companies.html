@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AISafe - Companies</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260612-backoffice-companies">
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar('companies', ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Reference Data</p>
+          <h1>Companies</h1>
+          <p class="page-copy">Register and inspect air transport companies identified by IATA and ICAO operator codes.</p>
+        </div>
+      </header>
+
+      <section class="areas-grid">
+        <article th:replace="~{fragments/table-card :: card(
+            'Registered Companies',
+            '/companies/table',
+            '#companies-tbody',
+            'Refresh companies',
+            ~{::#companies-head},
+            ~{fragments/companies :: rows(${snapshot.companies()})})}">
+          <thead id="companies-head">
+          <tr>
+            <th>IATA</th>
+            <th>ICAO</th>
+            <th>Name</th>
+          </tr>
+          </thead>
+        </article>
+
+        <aside class="card form-card">
+          <div class="card-head">
+            <h2>Create Company</h2>
+            <span>POST /companies</span>
+          </div>
+          <div id="form-result"></div>
+          <form hx-post="/companies" hx-target="#form-result" hx-swap="innerHTML" class="stack">
+            <div class="form-grid">
+              <label>
+                <span>IATA Code</span>
+                <input name="iataCode" required maxlength="2" placeholder="TP"
+                       hx-get="/companies/check-iata" hx-trigger="blur changed delay:200ms"
+                       hx-target="#iata-feedback" hx-swap="innerHTML"
+                       oninput="this.value=this.value.toUpperCase()">
+                <div id="iata-feedback"></div>
+              </label>
+              <label>
+                <span>ICAO Code</span>
+                <input name="icaoCode" required maxlength="3" placeholder="TAP"
+                       hx-get="/companies/check-icao" hx-trigger="blur changed delay:200ms"
+                       hx-target="#icao-feedback" hx-swap="innerHTML"
+                       oninput="this.value=this.value.toUpperCase()">
+                <div id="icao-feedback"></div>
+              </label>
+            </div>
+
+            <label>
+              <span>Company Name</span>
+              <input name="companyName" required maxlength="96" placeholder="TAP Air Portugal">
+            </label>
+
+            <button type="submit">Create Company</button>
+          </form>
+        </aside>
+      </section>
+    </main>
+  </div>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/sortable-table.js"></script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+// FR401 — Porto (OPO/LPPR) -> Lisbon (LIS/LPPT), Ryanair, Airbus A320neo
+// Alternate plan for the 2026-06-12 13:00 flight: a CURVED track (bows west over
+// the Atlantic, then back east into Lisbon) instead of a straight line, so the
+// rendered route line and per-segment wind visibly change.
+//
+// Winds are taken from the Open-Meteo data in the DB for the Porto (LPPO) and
+// Lisbon (LPPC) TMAs (sampled 2026-06-13 12:00 — "similar, not to a T"), matched
+// per area + altitude band. The area boundary is ~40.25°N (LPPO north, LPPC south).
+// Cruise is kept at ~3500 m (≈11500 ft) so the segment altitudes stay inside the
+// Open-Meteo coverage (surface→12000 ft) and the winds are genuinely consistent.
+//
+//   Band (ft)      LPPO dir/spd     LPPC dir/spd
+//   1001–2000      163° / 9.0       166° / 7.3
+//   4501–7000      130° / 6.8       118° / 14.6
+//   7001–12000     111° / 8.2       109° / 16.2
+flight FR401 {
+  type: regular
+
+  route {
+    origin: LPPR
+    destination: LPPT
+  }
+
+  leg 1 {
+    departure { airport: LPPR  datetime: 2026-06-18T09:00 }
+    arrival   { airport: LPPT  datetime: 2026-06-18T10:00 }
+    fuel: 5500 kg
+    segments {
+      // 1) Climb out of Porto, heading SW (LPPO, low level)
+      segment {
+        start: (41.2356, -8.6781)
+        end:   (40.9500, -9.1000)
+        slots { slot { altitude: 600 m  width: 500 m } }
+        wind { direction: 163  speed: 9.0 m/s }
+      }
+      // 2) Climbing further SW, out over the ocean (LPPO, mid level)
+      segment {
+        start: (40.9500, -9.1000)
+        end:   (40.5500, -9.6500)
+        slots { slot { altitude: 1500 m  width: 500 m } }
+        wind { direction: 130  speed: 6.8 m/s }
+      }
+      // 3) Top of climb / westmost point, crossing into the Lisbon TMA (cruise)
+      segment {
+        start: (40.5500, -9.6500)
+        end:   (40.1000, -9.9500)
+        slots { slot { altitude: 3500 m  width: 500 m } }
+        wind { direction: 110  speed: 16.0 m/s }
+      }
+      // 4) Cruise, curving back SE toward Lisbon (LPPC, high level)
+      segment {
+        start: (40.1000, -9.9500)
+        end:   (39.5500, -9.7000)
+        slots { slot { altitude: 3500 m  width: 500 m } }
+        wind { direction: 109  speed: 16.2 m/s }
+      }
+      // 5) Descent into the Lisbon basin (LPPC, mid level)
+      segment {
+        start: (39.5500, -9.7000)
+        end:   (39.1000, -9.3500)
+        slots { slot { altitude: 1500 m  width: 500 m } }
+        wind { direction: 118  speed: 14.6 m/s }
+      }
+      // 6) Final approach to Lisbon (LPPC, low level)
+      segment {
+        start: (39.1000, -9.3500)
+        end:   (38.7742, -9.1342)
+        slots { slot { altitude: 600 m  width: 500 m } }
+        wind { direction: 166  speed: 7.3 m/s }
+      }
+    }
+  }
+}

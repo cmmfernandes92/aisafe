@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence version="2.1" xmlns="http://xmlns.jcp.org/xml/ns/persistence">
+  <persistence-unit name="eapli.aisafe">
+    <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+
+    <class>eapli.framework.infrastructure.authz.domain.model.SystemUser</class>
+    <class>eapli.framework.infrastructure.authz.domain.model.Role</class>
+    <class>eapli.framework.infrastructure.authz.domain.model.RoleSet</class>
+    <class>eapli.framework.infrastructure.authz.domain.model.RoleAssignment</class>
+    <class>eapli.aisafe.usermanagement.domain.User</class>
+    <class>eapli.aisafe.usermanagement.domain.Email</class>
+    <class>eapli.aisafe.usermanagement.domain.PhoneNumber</class>
+    <class>eapli.aisafe.usermanagement.domain.SecurityClearance</class>
+    <class>eapli.aisafe.usermanagement.domain.SkillsAssessment</class>
+
+    <class>eapli.aisafe.makermanagement.domain.Maker</class>
+    <class>eapli.aisafe.makermanagement.domain.MakerName</class>
+
+    <class>eapli.aisafe.enginemodelmanagement.domain.EngineModel</class>
+    <class>eapli.aisafe.enginemodelmanagement.domain.EngineModelName</class>
+
+    <class>eapli.aisafe.aircraftmodelmanagement.domain.AircraftModel</class>
+    <class>eapli.aisafe.aircraftmodelmanagement.domain.AircraftModelName</class>
+
+    <class>eapli.aisafe.fleetmanagement.domain.Aircraft</class>
+    <class>eapli.aisafe.fleetmanagement.domain.Registration</class>
+    <class>eapli.aisafe.fleetmanagement.domain.CabinConfiguration</class>
+    <class>eapli.aisafe.fleetmanagement.domain.Country</class>
+    <class>eapli.aisafe.fleetmanagement.domain.BusinessSeats</class>
+    <class>eapli.aisafe.fleetmanagement.domain.EconomySeats</class>
+    <class>eapli.aisafe.fleetmanagement.domain.FirstClassSeats</class>
+
+    <class>eapli.aisafe.airtransportcompanymanagement.domain.AirTransportCompany</class>
+    <class>eapli.aisafe.airtransportcompanymanagement.domain.CompanyIATACode</class>
+    <class>eapli.aisafe.airtransportcompanymanagement.domain.CompanyICAOCode</class>
+
+    <class>eapli.aisafe.customercollaboratormanagement.domain.Collaborator</class>
+    <class>eapli.aisafe.customercollaboratormanagement.domain.CompanyCollaborator</class>
+    <class>eapli.aisafe.customercollaboratormanagement.domain.AreaCollaborator</class>
+    <class>eapli.aisafe.customercollaboratormanagement.domain.Position</class>
+
+    <class>eapli.aisafe.fleetmanagement.domain.Aircraft</class>
+    <class>eapli.aisafe.fleetmanagement.domain.Registration</class>
+    <class>eapli.aisafe.fleetmanagement.domain.CabinConfiguration</class>
+    <class>eapli.aisafe.fleetmanagement.domain.EconomySeats</class>
+    <class>eapli.aisafe.fleetmanagement.domain.BusinessSeats</class>
+    <class>eapli.aisafe.fleetmanagement.domain.FirstClassSeats</class>
+    <class>eapli.aisafe.fleetmanagement.domain.Country</class>
+
+    <class>eapli.aisafe.aircontrolareamanagement.domain.AirControlArea</class>
+    <class>eapli.aisafe.aircontrolareamanagement.domain.AreaCode</class>
+    <class>eapli.aisafe.aircontrolareamanagement.domain.AreaName</class>
+    <class>eapli.aisafe.aircontrolareamanagement.domain.Coordinates</class>
+    <class>eapli.aisafe.aircontrolareamanagement.domain.GeographicBoundary</class>
+
+    <class>eapli.aisafe.countrymanagement.domain.Country</class>
+    <class>eapli.aisafe.countrymanagement.domain.CountryCode</class>
+    <class>eapli.aisafe.countrymanagement.domain.CountryName</class>
+
+    <class>eapli.aisafe.airportmanagement.domain.Airport</class>
+    <class>eapli.aisafe.airportmanagement.domain.AirportICAOCode</class>
+    <class>eapli.aisafe.airportmanagement.domain.AirportIATACode</class>
+    <class>eapli.aisafe.airportmanagement.domain.AirportName</class>
+    <class>eapli.aisafe.airportmanagement.domain.Town</class>
+    <class>eapli.aisafe.airportmanagement.domain.Elevation</class>
+
+    <class>eapli.aisafe.flightmanagement.domain.Flight</class>
+    <class>eapli.aisafe.flightmanagement.domain.FlightPlan</class>
+    <class>eapli.aisafe.flightmanagement.domain.FlightId</class>
+
+    <class>eapli.aisafe.flightroutemanagement.domain.FlightRoute</class>
+    <class>eapli.aisafe.flightroutemanagement.domain.RouteName</class>
+    <class>eapli.aisafe.pilotmanagement.domain.Pilot</class>
+
+    <class>eapli.aisafe.weather.domain.WeatherData</class>
+    <class>eapli.aisafe.weather.domain.WeatherDataId</class>
+    <class>eapli.aisafe.weather.domain.TimePeriod</class>
+    <class>eapli.aisafe.weather.domain.WeatherWindSpeed</class>
+    <class>eapli.aisafe.weather.domain.WeatherWindDirection</class>
+    <class>eapli.aisafe.weather.domain.DataSource</class>
+
+    <class>eapli.aisafe.reporting.domain.SimulationRun</class>
+    <class>eapli.aisafe.reporting.domain.SimulationRunId</class>
+    <class>eapli.aisafe.reporting.domain.FlightExecutionStatus</class>
+    <class>eapli.aisafe.reporting.domain.SafetyViolation</class>
+
+    <properties>
+      <!-- Local H2 database file in your home folder (~/aisafe-demo.mv.db). AUTO_SERVER lets the consoles and the web app share it.
+           The project originally pointed at a shared H2 server on ISEP/DEI infrastructure. -->
+      <property name="jakarta.persistence.jdbc.url" value="jdbc:h2:~/aisafe-demo;AUTO_SERVER=TRUE"/>
+      <property name="jakarta.persistence.jdbc.user" value="sa"/>
+      <property name="jakarta.persistence.jdbc.password" value=""/>
+      <property name="jakarta.persistence.jdbc.driver" value="org.h2.Driver"/>
+      <!-- <property name="jakarta.persistence.schema-generation.database.action" value="drop-and-create"/> -->
+      <property name="hibernate.hbm2ddl.auto" value="update"/>
+      <property name="hibernate.dialect" value="org.hibernate.dialect.H2Dialect"/>
+    </properties>
+  </persistence-unit>
+</persistence>

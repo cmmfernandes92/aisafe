@@ -1,0 +1,35 @@
+// Same as valid_simple.flight but using IATA (3-letter) airport codes to cover
+// the IATA branch of visitAirportCode in FlightDomainBuildingVisitor.
+flight TP125 {
+  type: regular
+
+  route {
+    origin: LIS
+    destination: CDG
+  }
+
+  leg 1 {
+    departure {
+      airport: LIS
+      datetime: 2026-05-20T08:30
+    }
+    arrival {
+      airport: CDG
+      datetime: 2026-05-20T11:45
+    }
+    fuel: 8500 kg
+    segments {
+      segment {
+        start: (38.78, -9.13)
+        end:   (48.99, 2.55)
+        slots {
+          slot { altitude: 10000 m  width: 500 m }
+        }
+        wind {
+          direction: 270
+          speed: 15.5 m/s
+        }
+      }
+    }
+  }
+}

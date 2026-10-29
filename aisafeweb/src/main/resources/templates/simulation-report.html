@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title th:text="'AISafe — Simulation Report · ' + ${run.simId()}">AISafe — Simulation Report</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          ink: { 900:'#070B14', 800:'#0B1120', 700:'#101830', 600:'#131C36', 500:'#1E293B', 400:'#27324D', 300:'#3A4664' },
+          cyan2:'#00E5FF', purple2:'#7B61FF', pink2:'#FF4D9D', amber2:'#FFB547', green2:'#3EE6A8',
+        },
+        fontFamily: {
+          display:['Inter','system-ui','sans-serif'],
+          mono:['JetBrains Mono','ui-monospace','monospace'],
+        },
+      } },
+    };
+  </script>
+  <link rel="stylesheet" href="/css/app.css?v=20260606-sim-report">
+  <style id="report-style">
+    #report-root { font-family: 'Inter', system-ui, sans-serif; }
+    #report-root .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+    #report-root .num  { font-family: 'Inter', system-ui, sans-serif; font-feature-settings: 'tnum'; letter-spacing: 0.02em; }
+    #report-root .h-display { font-family: 'Inter', system-ui, sans-serif; font-weight: 600; letter-spacing: -0.02em; }
+
+    #report-root .card { background: linear-gradient(180deg, rgba(30,41,59,.55) 0%, rgba(19,28,54,.55) 100%); border: 1px solid rgba(58,70,100,.4); }
+    #report-root .accent-gradient { background: linear-gradient(90deg, #00E5FF 0%, #7B61FF 55%, #FF4D9D 100%); }
+
+    /* Result banner accent driven by --rc — with animated glow + sheen */
+    #report-root .result-banner { position: relative; overflow: hidden; border: 1px solid color-mix(in srgb, var(--rc) 40%, transparent); animation: rcPulse 3.2s ease-in-out infinite; }
+    #report-root .result-banner::before { content:''; position:absolute; inset:0; background: radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--rc) 14%, transparent) 0%, transparent 55%); pointer-events:none; }
+    #report-root .result-banner::after { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background: var(--rc); box-shadow: 0 0 22px 1px var(--rc); }
+    #report-root .result-banner .sheen { position:absolute; top:0; bottom:0; width:38%; transform:translateX(-130%); pointer-events:none;
+      background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--rc) 13%, transparent), transparent); animation: rcSheen 5.5s linear infinite; }
+    @keyframes rcPulse {
+      0%,100% { box-shadow: inset 0 0 60px -22px color-mix(in srgb, var(--rc) 55%, transparent), 0 0 0 0 transparent; }
+      50%     { box-shadow: inset 0 0 86px -16px color-mix(in srgb, var(--rc) 80%, transparent), 0 0 24px -2px color-mix(in srgb, var(--rc) 40%, transparent); }
+    }
+    @keyframes rcSheen { 0% { transform: translateX(-130%); } 100% { transform: translateX(260%); } }
+    #report-root .result-title { animation: titleGlow 2.6s ease-in-out infinite; }
+    @keyframes titleGlow { 0%,100% { text-shadow: 0 0 0 transparent; } 50% { text-shadow: 0 0 20px color-mix(in srgb, var(--rc) 65%, transparent); } }
+    #report-root .result-dot { animation: dotPulse 1.8s ease-in-out infinite; }
+    @keyframes dotPulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .55; transform: scale(.82); } }
+
+    #report-root .sev { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.06em; text-transform:uppercase; padding:2px 9px; border-radius:4px; display:inline-block; }
+    #report-root .sev.high { color:#FF4D9D; border:1px solid rgba(255,77,157,.45); background:rgba(255,77,157,.07); }
+    #report-root .sev.medium { color:#FFB547; border:1px solid rgba(255,181,71,.45); background:rgba(255,181,71,.07); }
+    #report-root .sev.low { color:#00E5FF; border:1px solid rgba(0,229,255,.4); background:rgba(0,229,255,.06); }
+
+    #report-root .viol-row { transition: background .12s; }
+    #report-root .viol-row:hover { background: rgba(255,255,255,.02); }
+
+    @media print {
+      .topbar, .sidebar, #report-actions, #report-back { display: none !important; }
+      .app-shell, body, html { background:#fff !important; }
+      .content { padding: 0 !important; }
+      #report-root .card, #report-root .result-banner { animation: none !important; }
+    }
+  </style>
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar('simulation-report', ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+
+      <!-- Back link -->
+      <a id="report-back" th:href="@{/modules/flight-control/simulation-report}"
+         class="mono" style="display:inline-flex;align-items:center;gap:.45rem;font-size:.66rem;letter-spacing:.14em;
+                text-transform:uppercase;color:#94a3b8;text-decoration:none;margin-bottom:.85rem;">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M10 6.5H4M6 4L3.5 6.5 6 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        All Simulation Reports
+      </a>
+
+      <!-- Page header + actions -->
+      <header class="page-head" style="align-items:flex-start;">
+        <div>
+          <p class="mono" style="font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:#00E5FF;margin:0 0 .35rem;">// Validation Output · Terminated Run</p>
+          <h1 style="margin:0;">Simulation Report</h1>
+          <div class="mono" style="display:flex;align-items:center;gap:.55rem 1rem;flex-wrap:wrap;margin-top:.55rem;font-size:.72rem;color:#94a3b8;">
+            <span><span style="color:#475569;"></span> <span style="color:#cbd5e1;" th:text="${run.date()} + ' ' + ${run.time()} + ' UTC'">date</span></span>
+            <span style="color:#334155;">·</span>
+            <span><span style="color:#475569;">SIM ID</span> <span style="color:#00E5FF;" th:text="${run.simId()}">SIM-ID</span></span>
+            <span style="color:#334155;">·</span>
+            <span><span style="color:#475569;">SECTOR</span> <span style="color:#cbd5e1;" th:text="${run.sectorCode()} + ' · ' + ${run.sectorName()}">LPPC</span></span>
+          </div>
+        </div>
+        <div id="report-actions" style="display:flex;gap:.5rem;flex-wrap:wrap;">
+          <button type="button" onclick="saveHtmlReport()" class="btn-primary mono"
+                  style="display:inline-flex;align-items:center;gap:.5rem;letter-spacing:.1em;text-transform:uppercase;font-size:.68rem;">
+            &#128190; Save HTML Report
+          </button>
+          <button type="button" onclick="window.print()" class="btn-primary mono"
+                  style="display:inline-flex;align-items:center;gap:.5rem;letter-spacing:.1em;text-transform:uppercase;font-size:.68rem;background:#8b5cf6;border-color:#8b5cf6;">
+            &#128424; Export as PDF
+          </button>
+        </div>
+      </header>
+
+      <!-- ===================== REPORT BODY (snapshot target) ===================== -->
+      <div id="report-root" class="text-slate-200">
+
+        <!-- Result banner -->
+        <section class="pt-1">
+          <div id="result-banner" class="result-banner card rounded-lg px-7 py-7 grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-7 items-center" style="--rc:#3EE6A8">
+            <span class="sheen"></span>
+            <div class="lg:border-r lg:border-ink-400/40 lg:pr-7">
+              <div class="mono text-[10px] uppercase tracking-[0.24em] text-slate-500 mb-3">Simulation Result</div>
+              <div class="flex items-center gap-4">
+                <div id="result-icon-wrap" class="result-dot w-[56px] h-[56px] rounded-full shrink-0 flex items-center justify-center" style="border:2px solid var(--rc); background: color-mix(in srgb, var(--rc) 10%, transparent); box-shadow: 0 0 24px -5px var(--rc);"></div>
+                <div id="result-title" class="result-title h-display text-[34px] leading-none tracking-tight" style="color:var(--rc)">—</div>
+              </div>
+            </div>
+            <div class="lg:pl-1">
+              <div class="mono text-[10px] uppercase tracking-[0.24em] text-slate-500 mb-2">Summary</div>
+              <div id="result-summary" class="h-display text-[26px] text-slate-100 leading-tight">—</div>
+              <div class="mt-4 flex items-center gap-2.5 mono text-[12px] whitespace-nowrap">
+                <span class="text-slate-500 uppercase tracking-[0.12em]">Threshold</span>
+                <span class="text-slate-300">max <span id="thr-val" class="text-slate-100">5</span> violations / run</span>
+                <span id="thr-pill" class="ml-1 px-2 py-0.5 rounded text-[10px] uppercase tracking-[0.1em]"></span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- KPI tiles -->
+        <section class="pt-6">
+          <div class="flex items-center gap-3 mb-3">
+            <span class="w-1 h-4 accent-gradient rounded-sm"></span>
+            <h2 class="mono text-[11px] uppercase tracking-[0.2em] text-slate-300">Run Outcome</h2>
+            <span id="run-outcome-sub" class="mono text-[10px] text-slate-500"></span>
+          </div>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <article class="card rounded p-4 relative overflow-hidden">
+              <div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan2/60 to-transparent"></div>
+              <div class="mono text-[9px] uppercase tracking-[0.18em] text-slate-500 mb-2">Total Flights</div>
+              <div id="kpi-total" class="num text-[30px] font-semibold text-slate-100 leading-none">0</div>
+              <div id="kpi-total-sub" class="mono text-[10px] text-slate-500 mt-2.5">scheduled · executed</div>
+            </article>
+            <article class="card rounded p-4 relative overflow-hidden">
+              <div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-green2/60 to-transparent"></div>
+              <div class="mono text-[9px] uppercase tracking-[0.18em] text-slate-500 mb-2">Flights Clear</div>
+              <div id="kpi-clear" class="num text-[30px] font-semibold text-green2 leading-none">0</div>
+              <div id="kpi-clear-sub" class="mono text-[10px] text-green2/80 mt-2.5">100% no violations</div>
+            </article>
+            <article class="card rounded p-4 relative overflow-hidden">
+              <div id="kpi-aff-bar" class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-slate-500/60 to-transparent"></div>
+              <div class="mono text-[9px] uppercase tracking-[0.18em] text-slate-500 mb-2">Flights w/ Violations</div>
+              <div id="kpi-aff" class="num text-[30px] font-semibold text-slate-100 leading-none">0</div>
+              <div id="kpi-aff-sub" class="mono text-[10px] text-slate-500 mt-2.5">across all operators</div>
+            </article>
+            <article class="card rounded p-4 relative overflow-hidden">
+              <div id="kpi-viol-bar" class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-slate-500/60 to-transparent"></div>
+              <div class="mono text-[9px] uppercase tracking-[0.18em] text-slate-500 mb-2">Safety Violations</div>
+              <div class="flex items-baseline gap-1.5">
+                <span id="kpi-viol" class="num text-[30px] font-semibold text-slate-100 leading-none">0</span>
+                <span class="mono text-[13px] text-slate-500">/ <span id="kpi-thr">5</span></span>
+              </div>
+              <div id="kpi-viol-sub" class="mono text-[10px] text-slate-500 mt-2.5">detected · threshold</div>
+            </article>
+          </div>
+        </section>
+
+        <!-- Operator attribution + run params -->
+        <section class="pt-7 grid grid-cols-1 xl:grid-cols-[1.4fr_1fr] gap-4">
+          <article class="card rounded p-5">
+            <header class="flex items-start justify-between mb-5">
+              <div>
+                <div class="mono text-[9px] uppercase tracking-[0.2em] text-purple2 mb-1">// Attribution</div>
+                <h3 class="h-display text-[16px] text-slate-100">Violations per Air Transport Company</h3>
+                <p class="text-[11px] text-slate-500 mt-0.5">Flights with one or more violations, grouped by operator</p>
+              </div>
+              <div class="text-right">
+                <div id="op-total" class="num text-[20px] text-slate-100 leading-none">0</div>
+                <div class="mono text-[9px] uppercase tracking-[0.15em] text-slate-500 mt-1">flights flagged</div>
+              </div>
+            </header>
+            <div id="operator-chart" class="space-y-2.5"></div>
+            <div id="operator-empty" class="hidden py-8 text-center">
+              <div class="mono text-[12px] text-green2">No operator implicated</div>
+              <div class="mono text-[10px] text-slate-500 mt-1">All scheduled flights completed without violations</div>
+            </div>
+          </article>
+
+          <article class="card rounded p-5">
+            <header class="mb-4">
+              <div class="mono text-[9px] uppercase tracking-[0.2em] text-cyan2 mb-1">// Run Parameters</div>
+              <h3 class="h-display text-[16px] text-slate-100">Simulation &amp; Thresholds</h3>
+            </header>
+            <div class="space-y-0">
+              <div class="flex items-center justify-between py-2 border-b border-ink-400/25">
+                <span class="mono text-[10px] uppercase tracking-[0.12em] text-slate-500">Scenario</span>
+                <span class="text-[12px] text-slate-200" th:text="${run.scenarioName()} + ' · ' + ${run.scenarioDesc()}">Scenario</span>
+              </div>
+              <div class="flex items-center justify-between py-2 border-b border-ink-400/25">
+                <span class="mono text-[10px] uppercase tracking-[0.12em] text-slate-500">Started</span>
+                <span class="mono text-[11px] text-slate-300" th:text="${run.started()}">start</span>
+              </div>
+              <div class="flex items-center justify-between py-2 border-b border-ink-400/25">
+                <span class="mono text-[10px] uppercase tracking-[0.12em] text-slate-500">Terminated</span>
+                <span class="mono text-[11px] text-slate-300" th:text="${run.terminated()}">end</span>
+              </div>
+              <div class="flex items-center justify-between py-2 border-b border-ink-400/25">
+                <span class="mono text-[10px] uppercase tracking-[0.12em] text-slate-500">Duration · Steps</span>
+                <span class="mono text-[11px] text-slate-300" th:text="${run.duration()} + ' · ' + ${run.stepsDone()} + ' / ' + ${run.totalSteps()}">dur</span>
+              </div>
+              <div class="flex items-center justify-between py-2 border-b border-ink-400/25">
+                <span class="mono text-[10px] uppercase tracking-[0.12em] text-slate-500">End reason</span>
+                <span class="mono text-[11px] text-slate-300" th:text="${run.endReason()}">COMPLETED</span>
+              </div>
+              <div class="flex items-center justify-between py-2">
+                <span class="mono text-[10px] uppercase tracking-[0.12em] text-slate-500">Validation outcome</span>
+                <span class="mono text-[11px]" th:style="'color:' + ${run.color()}" th:text="${run.verdict()}">PASS</span>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <!-- Violations table -->
+        <section class="pt-7">
+          <article class="card rounded overflow-hidden">
+            <header class="flex items-center justify-between px-5 py-4 border-b border-ink-400/30">
+              <div class="flex items-center gap-3">
+                <span class="w-5 h-5 flex items-center justify-center">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 1.5 L17 16 H1 Z" stroke="#FF4D9D" stroke-width="1.4" stroke-linejoin="round"/><line x1="9" y1="7" x2="9" y2="11" stroke="#FF4D9D" stroke-width="1.4" stroke-linecap="round"/><circle cx="9" cy="13.2" r="0.9" fill="#FF4D9D"/></svg>
+                </span>
+                <h3 class="h-display text-[16px] text-slate-100">Safety Violations</h3>
+                <span id="viol-count-pill" class="mono text-[11px] text-pink2 border border-pink2/40 bg-pink2/5 rounded-full px-2.5 py-0.5">0</span>
+              </div>
+            </header>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="border-b border-ink-400/30">
+                    <th class="px-5 py-3 mono text-[9px] uppercase tracking-[0.16em] text-slate-500 font-medium">Timestamp · UTC</th>
+                    <th class="px-3 py-3 mono text-[9px] uppercase tracking-[0.16em] text-slate-500 font-medium">Position · Alt</th>
+                    <th class="px-3 py-3 mono text-[9px] uppercase tracking-[0.16em] text-slate-500 font-medium">Type</th>
+                    <th class="px-3 py-3 mono text-[9px] uppercase tracking-[0.16em] text-slate-500 font-medium">Affected Flight(s)</th>
+                    <th class="px-5 py-3 mono text-[9px] uppercase tracking-[0.16em] text-slate-500 font-medium">Involved Companies</th>
+                  </tr>
+                </thead>
+                <tbody id="viol-body"></tbody>
+              </table>
+            </div>
+            <div id="viol-empty" class="hidden px-5 py-12 text-center">
+              <div class="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center" style="border:2px solid #3EE6A8; box-shadow:0 0 24px -6px #3EE6A8">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 10.5 L8 14.5 L16 6" stroke="#3EE6A8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div class="h-display text-[15px] text-slate-100">No safety violations recorded</div>
+              <div id="viol-empty-sub" class="mono text-[11px] text-slate-500 mt-1">The scheduled flight plan validated cleanly across all steps.</div>
+            </div>
+            <div id="viol-foot" class="px-5 py-3.5 border-t border-ink-400/30 flex items-center justify-between">
+              <span class="mono text-[11px] text-slate-400">Total safety violations detected: <span id="viol-foot-n" class="text-pink2 font-semibold">0</span></span>
+              <span class="mono text-[10px] text-slate-600">All timestamps in UTC · derived from violation.c event log</span>
+            </div>
+          </article>
+
+          <div id="report-footline" class="mt-6 flex items-center justify-between text-[10px] mono uppercase tracking-[0.15em] text-slate-500"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/sidebar.js"></script>
+  <script th:inline="javascript">
+    const REPORT = JSON.parse(/*[[${reportJson}]]*/ '{}');
+
+    function icon(kind, color) {
+      if (kind === 'check')
+        return `<svg width="30" height="30" viewBox="0 0 30 30" fill="none"><path d="M7 15.5 L13 21 L23 9" stroke="${color}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      if (kind === 'warn')
+        return `<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><path d="M16 4 L29 27 H3 Z" stroke="${color}" stroke-width="2.2" stroke-linejoin="round"/><line x1="16" y1="13" x2="16" y2="20" stroke="${color}" stroke-width="2.2" stroke-linecap="round"/><circle cx="16" cy="23.3" r="1.3" fill="${color}"/></svg>`;
+      return `<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="12.5" stroke="${color}" stroke-width="2.2"/><line x1="16" y1="9" x2="16" y2="17.5" stroke="${color}" stroke-width="2.2" stroke-linecap="round"/><circle cx="16" cy="21.6" r="1.3" fill="${color}"/></svg>`;
+    }
+    function opOf(code) { return code.replace(/[0-9].*$/, ''); }
+    function opName(op) { return (REPORT.operators && REPORT.operators[op]) || op; }
+
+    function render() {
+      const viols = REPORT.violations || [];
+      const n = viols.length;
+      const threshold = REPORT.threshold;
+      const total = REPORT.totalFlights;
+      const clean = n === 0;
+      const passed = n <= threshold;
+      // result colour + icon
+      const rc = clean ? '#3EE6A8' : (passed ? '#FFB547' : '#FF4D9D');
+      const title = passed ? 'PASSED' : 'FAILED';
+      const ic = clean ? 'check' : (passed ? 'warn' : 'alert');
+
+      // distinct affected flights + operator tally
+      const flightSet = new Set();
+      const opCount = {};
+      viols.forEach(v => v.flights.forEach(f => {
+        flightSet.add(f);
+        const op = opOf(f);
+        opCount[op] = (opCount[op] || 0) + 1;
+      }));
+      const affected = flightSet.size;
+      const clear = total - affected;
+
+      // ---- Banner ----
+      const banner = document.getElementById('result-banner');
+      banner.style.setProperty('--rc', rc);
+      document.getElementById('result-icon-wrap').innerHTML = icon(ic, rc);
+      document.getElementById('result-icon-wrap').style.borderColor = rc;
+      const titleEl = document.getElementById('result-title');
+      titleEl.textContent = title;
+      titleEl.style.color = rc;
+      document.getElementById('result-summary').textContent =
+        n === 0 ? '0 safety violations detected' : (n + ' safety violation' + (n>1?'s':'') + ' detected');
+      document.getElementById('thr-val').textContent = threshold > 0 ? threshold : '—';
+      const thrPill = document.getElementById('thr-pill');
+      if (passed) {
+        thrPill.textContent = clean ? 'clean' : 'within limit';
+        thrPill.style.cssText = 'color:'+rc+';border:1px solid '+rc+'66;background:'+rc+'14';
+      } else {
+        thrPill.textContent = 'exceeded by ' + (n - threshold);
+        thrPill.style.cssText = 'color:#FF4D9D;border:1px solid #FF4D9D66;background:#FF4D9D14';
+      }
+
+      // ---- KPIs ----
+      document.getElementById('run-outcome-sub').textContent =
+        '— ' + total + ' flights scheduled · ' + (REPORT.stepsDone === REPORT.totalSteps ? 'all executed' : 'terminated at step ' + REPORT.stepsDone);
+      document.getElementById('kpi-total').textContent = total;
+      document.getElementById('kpi-total-sub').textContent = 'scheduled · ' + total + ' executed';
+      document.getElementById('kpi-clear').textContent = clear;
+      document.getElementById('kpi-clear-sub').textContent = ((clear/total*100).toFixed(0)) + '% no violations';
+      const aff = document.getElementById('kpi-aff');
+      aff.textContent = affected;
+      aff.style.color = affected === 0 ? '#3EE6A8' : (passed ? '#FFB547' : '#FF4D9D');
+      document.getElementById('kpi-aff-sub').textContent = affected === 0
+        ? 'no operator implicated'
+        : 'across ' + Object.keys(opCount).length + ' operator' + (Object.keys(opCount).length>1?'s':'');
+      const viol = document.getElementById('kpi-viol');
+      viol.textContent = n;
+      viol.style.color = clean ? '#3EE6A8' : (passed ? '#FFB547' : '#FF4D9D');
+      document.getElementById('kpi-thr').textContent = threshold;
+      document.getElementById('kpi-viol-sub').textContent = passed ? (clean ? 'none detected' : 'within threshold') : 'over threshold';
+      const affCol = affected===0 ? 'green2' : (passed ? 'amber2' : 'pink2');
+      const violCol = clean ? 'green2' : (passed ? 'amber2' : 'pink2');
+      document.getElementById('kpi-aff-bar').className = 'absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-'+affCol+'/60 to-transparent';
+      document.getElementById('kpi-viol-bar').className = 'absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-'+violCol+'/60 to-transparent';
+
+      // ---- Operator chart ----
+      const chart = document.getElementById('operator-chart');
+      const empty = document.getElementById('operator-empty');
+      document.getElementById('op-total').textContent = affected;
+      const entries = Object.entries(opCount).sort((a,b) => b[1]-a[1]);
+      if (entries.length === 0) {
+        chart.innerHTML = '';
+        chart.classList.add('hidden');
+        empty.classList.remove('hidden');
+      } else {
+        chart.classList.remove('hidden');
+        empty.classList.add('hidden');
+        const max = Math.max(...entries.map(e => e[1]));
+        chart.innerHTML = entries.map(([op, c]) => {
+          const pct = Math.max(8, c / max * 100);
+          return `<div class="grid grid-cols-[150px_1fr_auto] items-center gap-3">
+            <div class="text-[11px] text-slate-300 truncate">${opName(op)} <span class="mono text-[10px] text-slate-500">${op}</span></div>
+            <div class="h-6 bg-ink-700/40 rounded-sm overflow-hidden">
+              <div class="h-full rounded-sm" style="width:${pct}%; background:linear-gradient(90deg,#7B61FF,#FF4D9D)"></div>
+            </div>
+            <div class="num text-[13px] font-semibold text-slate-100 w-8 text-right">${c}</div>
+          </div>`;
+        }).join('');
+      }
+
+      // ---- Violations table ----
+      const body = document.getElementById('viol-body');
+      const tableEmpty = document.getElementById('viol-empty');
+      const foot = document.getElementById('viol-foot');
+      document.getElementById('viol-count-pill').textContent = n;
+      document.getElementById('viol-foot-n').textContent = n;
+      const cp = document.getElementById('viol-count-pill');
+      cp.className = n === 0
+        ? 'mono text-[11px] text-green2 border border-green2/40 bg-green2/5 rounded-full px-2.5 py-0.5'
+        : 'mono text-[11px] text-pink2 border border-pink2/40 bg-pink2/5 rounded-full px-2.5 py-0.5';
+      document.getElementById('viol-empty-sub').textContent =
+        'The scheduled flight plan validated cleanly across all ' + REPORT.totalSteps + ' steps.';
+
+      if (n === 0) {
+        body.innerHTML = '';
+        tableEmpty.classList.remove('hidden');
+        foot.classList.add('hidden');
+      } else {
+        tableEmpty.classList.add('hidden');
+        foot.classList.remove('hidden');
+        body.innerHTML = viols.map(v => {
+          const flights = v.flights.map(f => `<span class="mono text-[11px] text-slate-200">${f}</span>`).join('<span class="text-slate-600 mx-1">·</span>');
+          const comps = [...new Set(v.flights.map(opOf))].map(op =>
+            `<div class="flex items-baseline gap-1.5"><span class="text-[12px] text-slate-300">${opName(op)}</span><span class="mono text-[9px] text-slate-500">${op}</span></div>`
+          ).join('');
+          return `<tr class="viol-row border-b border-ink-400/15">
+            <td class="px-5 py-3.5 align-top">
+              <div class="mono text-[12px] text-slate-100">${v.t}</div>
+              <div class="mono text-[9px] text-slate-500 mt-0.5 uppercase tracking-[0.1em]">${REPORT.date}</div>
+            </td>
+            <td class="px-3 py-3.5 align-top">
+              <div class="mono text-[11px] text-slate-300">x ${v.x.toLocaleString()} · y ${v.y.toLocaleString()} m</div>
+              <div class="mono text-[10px] text-slate-500 mt-0.5">alt ${v.alt.toLocaleString()} m · step ${v.step}</div>
+            </td>
+            <td class="px-3 py-3.5 align-top">
+              <span class="text-[12px] text-slate-200">${v.type}</span>
+              <div class="mt-1"><span class="sev ${v.sev}">${v.sev}</span></div>
+              <div class="text-[10px] text-slate-500 mt-1 max-w-[260px]">${v.desc}</div>
+            </td>
+            <td class="px-3 py-3.5 align-top whitespace-nowrap">${flights}</td>
+            <td class="px-5 py-3.5 align-top"><div class="space-y-1">${comps}</div></td>
+          </tr>`;
+        }).join('');
+      }
+
+      // ---- Footline ----
+      document.getElementById('report-footline').innerHTML =
+        `<span>AISafe · Airspace Simulator v1.8.0 · ${REPORT.sectorCode}</span>` +
+        `<span>Report ${REPORT.simId} · generated ${REPORT.date} ${REPORT.time} UTC</span>`;
+    }
+
+    // ---- Save standalone HTML ----
+    function saveHtmlReport() {
+      const root = document.getElementById('report-root').outerHTML;
+      const style = document.getElementById('report-style').outerHTML;
+      const cfg = '<scr'+'ipt>tailwind.config={theme:{extend:{colors:{ink:{900:"#070B14",800:"#0B1120",700:"#101830",600:"#131C36",500:"#1E293B",400:"#27324D",300:"#3A4664"},cyan2:"#00E5FF",purple2:"#7B61FF",pink2:"#FF4D9D",amber2:"#FFB547",green2:"#3EE6A8"}}}};</scr'+'ipt>';
+      const fonts = '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">';
+      const tw = '<scr'+'ipt src="https://cdn.tailwindcss.com"></scr'+'ipt>';
+      const doc = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
+        + '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
+        + '<title>AISafe — Simulation Report · ' + REPORT.simId + '</title>'
+        + tw + cfg + fonts + style + '</head>'
+        + '<body style="background:#070B14;color:#E5ECF7;font-family:Inter,system-ui,sans-serif;margin:0;padding:28px;">'
+        + root + '</body></html>';
+      const blob = new Blob([doc], { type: 'text/html' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'simulation-report-' + REPORT.simId + '.html';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }
+
+    render();
+  </script>
+</body>
+</html>

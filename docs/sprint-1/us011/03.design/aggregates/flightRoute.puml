@@ -1,0 +1,32 @@
+@startuml
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+
+package "FlightRoute Aggregate" {
+    class FlightRoute <<aggregate root>>
+    class RouteName <<value object>>
+    enum RouteValidity <<enum>> {
+        ACTIVE
+        INACTIVE
+    }
+
+    FlightRoute *-- RouteName
+    FlightRoute *-- RouteValidity
+}
+
+' Cross-aggregate references (shown as dependencies)
+class Airport <<aggregate root>> #White
+class AirTransportCompany <<aggregate root>> #White
+
+FlightRoute --> "2" Airport : origin, destination
+FlightRoute --> AirTransportCompany : belongs to
+
+@enduml

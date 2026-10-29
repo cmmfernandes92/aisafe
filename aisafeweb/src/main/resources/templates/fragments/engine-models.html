@@ -1,0 +1,13 @@
+<tbody th:fragment="rows(engineModels)" id="engine-models-tbody">
+  <tr th:each="em : ${engineModels}">
+    <td th:text="${em.name()}">CFM56</td>
+    <td th:text="${em.makerName()}">CFM International</td>
+    <td class="mono" th:text="${em.motorizationType()}">TURBOFAN</td>
+    <td class="mono" th:text="${em.fuelType()}">JET_A1</td>
+    <td class="mono" th:text="${#numbers.formatDecimal(em.power(), 1, 0)}">121400</td>
+    <td class="mono" th:text="${#numbers.formatDecimal(em.efficiency(), 1, 4)}">0.0370</td>
+  </tr>
+  <tr th:if="${#lists.isEmpty(engineModels)}">
+    <td colspan="6" class="empty">No engine models registered.</td>
+  </tr>
+</tbody>

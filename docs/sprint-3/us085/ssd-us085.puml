@@ -1,0 +1,29 @@
+@startuml ssd-us085
+skinparam actorStyle awesome
+
+title US085 – Test/validate a flight plan (System Sequence Diagram)
+
+actor Pilot
+participant ":AISafe System" as System
+
+activate Pilot
+
+Pilot -> System : requestTestFlightPlan(route, departureDate)
+activate System
+System --> Pilot : show the flight's current (VALIDATED) plan
+deactivate System
+
+Pilot -> System : confirmTest()
+activate System
+note right of System
+  Re-validate DSL (US120) → resolve attached weather (US082)
+  → run §3.3 fuel/altitude physics → check departure consistency
+end note
+alt plan passes the test
+    System --> Pilot : verdict OK – plan promoted to TESTED
+else plan fails the test
+    System --> Pilot : verdict FAILED – clear reasons\n(DSL issues / fuel / altitude / departure);\nstate unchanged
+end
+deactivate System
+
+@enduml

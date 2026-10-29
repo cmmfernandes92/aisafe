@@ -1,0 +1,118 @@
+@startuml us056-implementation
+title US056 - Register Engine Model Class Diagram
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>> #95A5A6
+    FontColor<<external>> #1A1A1A
+}
+
+' ============================================
+' PRESENTATION
+' ============================================
+package "Presentation" {
+    class RegisterEngineModelUI {
+        + doShow() : boolean
+        + headline() : String
+    }
+}
+
+' ============================================
+' APPLICATION
+' ============================================
+package "Application" {
+    class RegisterEngineModelController <<UseCaseController>> {
+        + register(name, maker, motType, fuelType,\n  power, efficiency) : EngineModel
+        + listMakers() : Iterable<Maker>
+        + engineModelExists(name, maker) : boolean
+    }
+}
+
+' ============================================
+' DOMAIN
+' ============================================
+package "Domain" {
+    class EngineModel <<aggregate root>> {
+        - power : double
+        - efficiency : double
+        + identity() : EngineModelName
+        + motorizationType() : MotorizationType
+        + fuelType() : FuelType
+        + maker() : Maker
+    }
+    class EngineModelName <<value object>> {
+        - value : String
+        + valueOf(String) : EngineModelName
+    }
+    enum MotorizationType <<enum>> {
+        TURBOPROP
+        TURBOFAN
+        TURBOJET
+        RAMJET
+        ELECTRIC_PROPELLER
+    }
+    enum FuelType <<enum>> {
+        JET_A
+        JET_A1
+        AVGAS
+        ELECTRIC
+    }
+    interface EngineModelRepository {
+        + findByNameAndMaker(EngineModelName, Maker) : Optional<EngineModel>
+        + save(EngineModel) : EngineModel
+    }
+}
+
+' ============================================
+' PERSISTENCE
+' ============================================
+package "Persistence" {
+    class JpaEngineModelRepository
+    class InMemoryEngineModelRepository
+}
+
+' ============================================
+' BOOTSTRAP
+' ============================================
+package "Bootstrap" {
+    class EngineModelBootstrapper {
+        + execute() : boolean
+    }
+}
+
+' ============================================
+' EXTERNAL (referenced, not modified)
+' ============================================
+class Maker <<external>> #EAEDED
+interface MakerRepository <<external>> #EAEDED
+
+' ============================================
+' Relationships
+' ============================================
+RegisterEngineModelUI ..> RegisterEngineModelController : uses
+
+RegisterEngineModelController ..> EngineModelRepository : queries & saves
+RegisterEngineModelController ..> MakerRepository : queries
+RegisterEngineModelController ..> EngineModel : creates
+
+EngineModel *-- EngineModelName : identity
+EngineModel *-- MotorizationType
+EngineModel *-- FuelType
+EngineModel --> Maker : manufacturer
+
+JpaEngineModelRepository ..|> EngineModelRepository
+InMemoryEngineModelRepository ..|> EngineModelRepository
+
+EngineModelBootstrapper ..> RegisterEngineModelController : uses
+
+@enduml

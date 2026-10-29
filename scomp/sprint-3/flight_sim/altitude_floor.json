@@ -1,0 +1,54 @@
+{
+    "sim_params": {
+        "name": "altitude_floor",
+        "total_steps": 20,
+        "seconds_per_step": 60.0,
+        "history_depth": 2,
+        "max_violations": 0,
+        "h_min": 8.0,
+        "v_min": 600.0,
+        "area_x_min": -500000.0,
+        "area_x_max": 500000.0,
+        "area_y_min": -500000.0,
+        "area_y_max": 500000.0,
+        "area_alt_min": 4000.0,
+        "area_alt_max": 20000.0,
+        "ref_lat": 41.0,
+        "ref_lon": -6.0
+    },
+    "flights": [
+        {
+            "ID": 501,
+            "Flight Profile": {
+                "Climb": [
+                    { "Altitude": { "Value": 0, "Unit": "m" }, "Speed": { "Value": 210, "Unit": "Knots" }, "RateClimb": { "Value": 12.0, "Unit": "m/s" } },
+                    { "Altitude": { "Value": 5000, "Unit": "m" }, "Speed": { "Value": 260, "Unit": "Knots" }, "RateClimb": { "Value": 9.5, "Unit": "m/s" } },
+                    { "Altitude": { "Value": 9000, "Unit": "m" }, "Speed": { "Value": 290, "Unit": "Knots" }, "RateClimb": { "Value": 7.0, "Unit": "m/s" } }
+                ],
+                "Descend": [
+                    { "Altitude": { "Value": 9000, "Unit": "m" }, "Speed": { "Value": 300, "Unit": "Knots" }, "RateDescent": { "Value": -10, "Unit": "m/s" } },
+                    { "Altitude": { "Value": 3000, "Unit": "m" }, "Speed": { "Value": 250, "Unit": "Knots" }, "RateDescent": { "Value": -8, "Unit": "m/s" } },
+                    { "Altitude": { "Value": 0, "Unit": "m" }, "Speed": { "Value": 140, "Unit": "Knots" }, "RateDescent": { "Value": -5, "Unit": "m/s" } }
+                ],
+                "Cruise": { "Speed": { "Value": 460, "Unit": "Knots" } }
+            },
+            "Segments": [
+                {
+                    "Mode": "descend",
+                    "Start": { "Latitude": 41.262891, "Longitude": -8.68522, "Altitude": { "Quantity": 6000, "Unit": "m" } },
+                    "End":   { "Latitude": 41.6, "Longitude": -7.5, "Altitude": { "Quantity": 2000, "Unit": "m" } }
+                },
+                {
+                    "Mode": "climb",
+                    "Start": { "Latitude": 41.6, "Longitude": -7.5, "Altitude": { "Quantity": 2000, "Unit": "m" } },
+                    "End":   { "Latitude": 41.0, "Longitude": -4.3, "Altitude": { "Quantity": 6000, "Unit": "m" } }
+                },
+                {
+                    "Mode": "descend",
+                    "Start": { "Latitude": 41.0, "Longitude": -4.3, "Altitude": { "Quantity": 6000, "Unit": "m" } },
+                    "End":   { "Latitude": 40.4895, "Longitude": -3.5643, "Altitude": { "Quantity": 5000, "Unit": "m" } }
+                }
+            ]
+        }
+    ]
+}

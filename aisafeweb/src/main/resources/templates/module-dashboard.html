@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title th:text="'AISafe - ' + ${currentModule.label()}">AISafe - Module</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260531-table-polish">
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar('dashboard', ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow" th:text="${currentModule.label()}">Module</p>
+          <h1 th:text="${currentModule.label()} + ' Dashboard'">Module Dashboard</h1>
+          <p class="page-copy" th:text="${currentModule.description()}">
+            Module workspace.
+          </p>
+        </div>
+      </header>
+
+      <section class="card module-placeholder">
+        <div>
+          <p class="eyebrow">Module Shell</p>
+          <h2>Dashboard pending implementation</h2>
+          <p>
+            This module is available to your AISafe role set. Its dashboard and left-side navigation
+            are now isolated from Backoffice so feature pages can be added without changing the shell.
+          </p>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="/js/sidebar.js"></script>
+</body>
+</html>

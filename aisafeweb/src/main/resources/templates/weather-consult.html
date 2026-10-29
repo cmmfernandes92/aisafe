@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AISafe - Consult Weather Data</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260612-weather-consult">
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar('consult-weather-data', ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Weather Service</p>
+          <h1>Consult Weather Data</h1>
+          <p class="page-copy">
+            Query weather data already registered in AISafe by air control area and
+            day, using the same read-only use case as the console adapters.
+          </p>
+        </div>
+      </header>
+
+      <section class="areas-grid">
+        <article class="card table-card">
+          <div class="card-head">
+            <h2>Weather Data Results</h2>
+            <span>Selected area/day</span>
+          </div>
+          <div id="weather-consult-results">
+            <div class="lifecycle-empty">Select an area and day to load weather data.</div>
+          </div>
+        </article>
+
+        <aside class="card form-card">
+          <div class="card-head">
+            <h2>Weather Query</h2>
+          </div>
+          <div th:replace="~{fragments/weather-consult :: form(${resultsPath}, ${areas})}"></div>
+        </aside>
+      </section>
+    </main>
+  </div>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/sortable-table.js"></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+@startuml us043_ssd
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam defaultFontSize 11
+
+actor "Weather Person / Pilot / Flight Control Operator" as User
+participant "AISafe System" as System
+
+activate User
+User -> System: consultWeatherData(areaCode, day)
+activate System
+
+alt air control area does not exist
+    System --> User: inform invalid air control area
+else no weather data found
+    System --> User: inform no weather data available
+else weather data found
+    System --> User: weather data records for the selected area and day,\nincluding weather zone and altitude information
+end
+
+deactivate System
+deactivate User
+
+@enduml

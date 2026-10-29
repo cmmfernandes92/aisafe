@@ -1,0 +1,66 @@
+@startuml us041_domain_model_excerpt
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+left to right direction
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>> #95A5A6
+    FontColor<<external>> #1A1A1A
+}
+
+' ============================================
+' AGGREGATE: WeatherData (this US)
+' ============================================
+package "WeatherData Aggregate" {
+    class WeatherData <<aggregate root>> {
+        + temperature : double
+        + atmosphericPressure : double
+        + visibility : double
+    }
+    class WeatherDataId <<value object>>
+    class TimePeriod <<value object>> {
+        + startTime : LocalDateTime
+        + endTime : LocalDateTime
+    }
+    class WeatherWindSpeed <<value object>> {
+        + value : double
+    }
+    class WeatherWindDirection <<value object>> {
+        + degrees : double
+    }
+    class DataSource <<value object>> {
+        + name : String
+    }
+
+    WeatherData *-- WeatherDataId
+    WeatherData *-- TimePeriod
+    WeatherData *-- WeatherWindSpeed
+    WeatherData *-- WeatherWindDirection
+    WeatherData *-- DataSource
+}
+
+' ============================================
+' EXTERNAL AGGREGATES (reference only, grey)
+' ============================================
+package "AirControlArea Aggregate" #EEEEEE {
+    class AirControlArea <<aggregate root>> <<external>>
+    class AreaCode <<value object>> <<external>>
+
+    AirControlArea *-- AreaCode
+}
+
+' ============================================
+' CROSS-AGGREGATE RELATIONSHIPS
+' ============================================
+WeatherData --> AirControlArea : for area\n(references by AreaCode)
+
+@enduml

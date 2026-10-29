@@ -1,0 +1,16 @@
+<tbody th:fragment="rows(airports)" id="airports-tbody">
+  <tr th:each="airport : ${airports}">
+    <td class="mono" th:text="${airport.icaoCode()}">LPPT</td>
+    <td class="mono" th:text="${airport.iataCode()}">LIS</td>
+    <td th:text="${airport.name()}">Humberto Delgado Airport</td>
+    <td th:text="${airport.town()}">Lisbon</td>
+    <td th:text="${airport.country()}">Portugal</td>
+    <td class="mono" th:text="${airport.areaCode()}">LPPC</td>
+    <td class="mono" th:text="${#numbers.formatDecimal(airport.elevationMeters(), 1, 1)}">114.0</td>
+    <td class="mono" th:text="${#numbers.formatDecimal(airport.latitude(), 1, 4)}">38.7742</td>
+    <td class="mono" th:text="${#numbers.formatDecimal(airport.longitude(), 1, 4)}">-9.1342</td>
+  </tr>
+  <tr th:if="${#lists.isEmpty(airports)}">
+    <td colspan="9" class="empty">No airports registered.</td>
+  </tr>
+</tbody>

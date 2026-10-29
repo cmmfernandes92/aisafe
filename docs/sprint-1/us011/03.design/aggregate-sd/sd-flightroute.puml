@@ -1,0 +1,75 @@
+@startuml
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+autonumber
+
+title Create a Flight Route (US073)
+
+actor "ATCC" as A
+participant ":CreateFlightRouteUI" as UI <<presentation>>
+participant ":CreateFlightRouteController" as CTRL <<application>>
+participant ":AirportRepository" as APR <<persistence>>
+participant ":AirTransportCompanyRepository" as ATCR <<persistence>>
+participant ":FlightRoute" as FR <<domain>>
+participant ":FlightRouteRepository" as FRR <<persistence>>
+
+activate A
+
+A -> UI : asks to create\na flight route
+activate UI
+
+UI -> CTRL : create()
+activate CTRL
+
+CTRL -> APR : findAll()
+activate APR
+APR --> CTRL : airports
+deactivate APR
+
+CTRL --> UI : airports
+
+UI --> A : shows available airports
+deactivate UI
+
+A -> UI : selects origin and destination\nairports; enters route name
+activate UI
+
+UI -> CTRL : createFlightRoute(routeName,\noriginCode, destinationCode)
+
+CTRL -> APR : findByIATACode(originCode)
+activate APR
+APR --> CTRL : originAirport
+deactivate APR
+
+CTRL -> APR : findByIATACode(destinationCode)
+activate APR
+APR --> CTRL : destinationAirport
+deactivate APR
+
+CTRL -> ATCR : findByCollaborator(currentUser)
+activate ATCR
+ATCR --> CTRL : company
+deactivate ATCR
+
+CTRL -> FR ** : create(routeName, originAirport,\ndestinationAirport, company)
+note right of FR
+  Validates (Information Expert):
+  - origin != destination
+  - route name format (2 letters + up to 4 digits)
+  - company is not null
+end note
+
+CTRL -> FRR : save(flightRoute)
+activate FRR
+FRR --> CTRL : flightRoute
+deactivate FRR
+
+CTRL --> UI : flightRoute
+deactivate CTRL
+
+UI --> A : shows created route
+deactivate UI
+
+deactivate A
+
+@enduml

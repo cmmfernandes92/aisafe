@@ -1,0 +1,74 @@
+@startuml
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+autonumber
+
+title Register Pilot
+
+actor "Backoffice Operator" as BO
+participant ":PilotUI" as UI <<presentation>>
+participant ":CreatePilotController" as C <<application>>
+participant ":AirTransportCompanyRepository" as ATCR <<persistence>>
+participant ":UserRepository" as UR <<persistence>>
+participant ":AircraftModelRepository" as AMR <<persistence>>
+participant ":PilotRepository" as PR <<persistence>>
+participant ":PilotCertification" as PC <<domain>>
+participant ":Pilot" as P <<domain>>
+
+activate BO
+
+BO -> UI : asks to register\na pilot
+activate UI
+UI --> BO : requests pilot data
+deactivate UI
+
+BO -> UI : enters companyId, userId,\naircraftModelIds, pilotStatus
+activate UI
+UI -> C : createPilot(companyId, userId,\naircraftModelIds, pilotStatus)
+activate C
+
+C -> ATCR : ofIdentity(companyId)
+activate ATCR
+ATCR --> C : airTransportCompany
+deactivate ATCR
+
+C -> UR : ofIdentity(userId)
+activate UR
+UR --> C : user
+deactivate UR
+
+C -> AMR : ofIdentities(aircraftModelIds)
+activate AMR
+AMR --> C : aircraftModels
+deactivate AMR
+
+loop for each aircraft model
+    C -> PC ** : create(aircraftModel)
+    note right of PC
+      Validates (Information Expert):
+      - certification refers to a valid\n        aircraft model
+    end note
+end
+
+C -> P ** : create(airTransportCompany,\nuser, certifications, pilotStatus)
+note right of P
+  Validates (Information Expert):
+  - pilot belongs to exactly one company
+  - pilot references exactly one user
+  - pilot has at least one certification
+  - pilot status is valid
+end note
+
+C -> PR : save(pilot)
+activate PR
+PR --> C : pilot
+deactivate PR
+
+C --> UI : pilot
+deactivate C
+
+UI --> BO : shows successful registration
+deactivate UI
+deactivate BO
+
+@enduml

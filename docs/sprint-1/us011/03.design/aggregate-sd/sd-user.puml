@@ -1,0 +1,118 @@
+@startuml
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+autonumber
+title Manage Backoffice Users (US031, US032, US033)
+
+actor "Administrator" as A
+participant ":ManageUsersUI" as UI <<presentation>>
+participant ":ManageUsersController" as C <<application>>
+participant ":AuthorizationService" as AUTH <<infrastructure>>
+participant ":UserRepository" as Repo <<persistence>>
+participant ":Email" as E <<domain>>
+participant ":SecurityClearance" as SC <<domain>>
+participant ":SkillsAssessment" as SA <<domain>>
+participant ":User" as U <<domain>>
+
+activate A
+
+A -> UI : asks to register\na backoffice user
+activate UI
+UI -> C : registerUser(fullName, email, phone,\nrole, clearanceExpiration, assessmentDate)
+activate C
+
+C -> AUTH : ensureAuthenticatedAndAuthorized(ADMIN)
+activate AUTH
+AUTH --> C : ok
+deactivate AUTH
+
+C -> E ** : valueOf(email)
+note right of E
+  Validates (Information Expert):
+  - email format
+  - allowed domain
+end note
+
+C -> Repo : contains(emailVO)
+activate Repo
+Repo --> C : false
+deactivate Repo
+
+C -> SC ** : create(clearanceExpiration)
+note right of SC
+  Validates (Information Expert):
+  - expiration date is valid
+end note
+
+C -> SA ** : create(assessmentDate, period <= 5 years)
+note right of SA
+  Validates (Information Expert):
+  - assessment validity period
+end note
+
+C -> U ** : create(fullName, phone, emailVO,\nrole, ACTIVE, securityClearance,\nskillsAssessment)
+note right of U
+  Enforces aggregate invariants:
+  - unique email
+  - exactly one role
+  - valid status transition rules
+end note
+
+C -> Repo : save(user)
+activate Repo
+Repo --> C : user
+deactivate Repo
+
+C --> UI : user
+deactivate C
+UI --> A : shows successful registration
+deactivate UI
+
+A -> UI : asks to disable\na user
+activate UI
+UI -> C : disableUser(userId)
+activate C
+
+C -> AUTH : ensureAuthenticatedAndAuthorized(ADMIN)
+activate AUTH
+AUTH --> C : ok
+deactivate AUTH
+
+C -> Repo : ofIdentity(userId)
+activate Repo
+Repo --> C : user
+deactivate Repo
+
+C -> U : disable()
+C -> Repo : save(user)
+activate Repo
+Repo --> C : user
+deactivate Repo
+
+C --> UI : user disabled
+deactivate C
+UI --> A : shows updated status
+deactivate UI
+
+A -> UI : requests users list
+activate UI
+UI -> C : listUsers()
+activate C
+
+C -> AUTH : ensureAuthenticatedAndAuthorized(ADMIN)
+activate AUTH
+AUTH --> C : ok
+deactivate AUTH
+
+C -> Repo : findAll()
+activate Repo
+Repo --> C : users with status
+deactivate Repo
+
+C --> UI : users with status
+deactivate C
+UI --> A : displays users list
+deactivate UI
+
+deactivate A
+@enduml

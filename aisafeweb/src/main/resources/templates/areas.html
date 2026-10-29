@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AISafe - Air Control Areas</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260531-table-polish">
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar('air-control-areas', ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Reference Data</p>
+          <h1>Air Control Areas</h1>
+          <p class="page-copy">Create and inspect geographic control boundaries used across AISafe operations.</p>
+        </div>
+      </header>
+
+      <section class="areas-grid">
+        <article th:replace="~{fragments/table-card :: card(
+            'Registered Areas',
+            '/areas/table',
+            '#areas-tbody',
+            'Refresh areas',
+            ~{::#areas-head},
+            ~{fragments/areas :: rows(${snapshot.areas()})})}">
+          <thead id="areas-head">
+          <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>SW Lat</th>
+            <th>SW Lon</th>
+            <th>NE Lat</th>
+            <th>NE Lon</th>
+          </tr>
+          </thead>
+        </article>
+
+        <aside class="card form-card">
+          <div class="card-head">
+            <h2>Create Area</h2>
+            <span>POST /areas</span>
+          </div>
+          <div id="form-result"></div>
+          <form hx-post="/areas" hx-target="#form-result" hx-swap="innerHTML" class="stack">
+            <label>
+              <span>Area Code</span>
+              <input name="code" required maxlength="8" placeholder="LPPC"
+                     hx-get="/areas/check-code" hx-trigger="blur changed delay:200ms"
+                     hx-target="#code-feedback" hx-swap="innerHTML"
+                     oninput="this.value=this.value.toUpperCase()">
+              <div id="code-feedback"></div>
+            </label>
+            <label>
+              <span>Area Name</span>
+              <input name="name" required maxlength="64" placeholder="Lisbon ACC"
+                     hx-get="/areas/check-name" hx-trigger="blur changed delay:200ms"
+                     hx-target="#name-feedback" hx-swap="innerHTML">
+              <div id="name-feedback"></div>
+            </label>
+            <div class="form-grid">
+              <label><span>SW Latitude</span><input name="swLat" type="number" step="0.000001" min="-90" max="90" required></label>
+              <label><span>SW Longitude</span><input name="swLon" type="number" step="0.000001" min="-180" max="180" required></label>
+              <label><span>NE Latitude</span><input name="neLat" type="number" step="0.000001" min="-90" max="90" required></label>
+              <label><span>NE Longitude</span><input name="neLon" type="number" step="0.000001" min="-180" max="180" required></label>
+            </div>
+            <button type="submit">Create Air Control Area</button>
+          </form>
+        </aside>
+      </section>
+    </main>
+  </div>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/sortable-table.js"></script>
+</body>
+</html>

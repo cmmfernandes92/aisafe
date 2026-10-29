@@ -1,0 +1,109 @@
+@startuml class-diagram-us111
+title US111 – Generate a Simulation Report (class diagram)
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor      #5B9BD5
+skinparam packageStyle           rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor     #888888
+skinparam defaultFontSize        11
+hide empty members
+
+package "Presentation — aisafe.app.fco.console" {
+    class GenerateSimulationReportUI <<presentation>>
+    class GenerateSimulationReportAction <<Command>>
+    GenerateSimulationReportAction ..> GenerateSimulationReportUI : creates
+}
+
+package "Application — aisafe.core" {
+    class GenerateSimulationReportController <<Controller>> {
+        +generate(reportFile, outputPath)
+    }
+    interface SimulationResultSource <<port>> {
+        +read(file) : ParsedSimulationReport
+    }
+    class ParsedSimulationReport <<DTO>>
+    class ParsedFlightStatus <<DTO>>
+    class ParsedViolation <<DTO>>
+    ParsedSimulationReport *-- "0..*" ParsedFlightStatus
+    ParsedSimulationReport *-- "0..*" ParsedViolation
+    SimulationResultSource ..> ParsedSimulationReport
+}
+
+package "Domain — aisafe.core" {
+    class SimulationReportAssembler <<Domain Service>><<Factory>> {
+        +assemble(parsed, areaCode) : SimulationRun
+    }
+    class SimulationRun <<aggregate root>>
+    class SimulationResult <<entity>>
+    class FlightExecutionStatus <<entity>>
+    class SafetyViolation <<entity>> {
+        +{static} separation(step, ts, a, b, hDist, vDist) : SafetyViolation
+        +{static} altitude(step, ts, kind, flight, metresPastBound) : SafetyViolation
+    }
+    enum ViolationKind <<enum>> {
+        SEPARATION
+        ALTITUDE_CEILING
+        ALTITUDE_FLOOR
+        UNKNOWN
+    }
+    class InvolvedFlight <<value object>> {
+        flightDesignator
+        position
+        velocity
+    }
+    enum ValidationOutcome <<enum>>
+    interface SimulationRunRepository <<repository>>
+
+    SimulationRun *-- "0..1" SimulationResult
+    SimulationResult *-- ValidationOutcome
+    SimulationResult *-- "0..*" FlightExecutionStatus
+    SimulationResult *-- "0..*" SafetyViolation
+    SafetyViolation *-- ViolationKind
+    SafetyViolation *-- "1..2" InvolvedFlight : one per involved flight
+    note right of SimulationRun
+      Full aggregate internals in the
+      domain model excerpt (readme 3.6)
+    end note
+    note bottom of SimulationReportAssembler
+      US111.3: maps each ParsedViolation's kind to
+      SafetyViolation.separation (2 flights) or
+      .altitude (1 flight).
+    end note
+}
+
+package "Infrastructure" {
+    class TextSimulationReportParser <<Adapter>>
+    class SimulationReportWriter <<Pure Fabrication>>
+    TextSimulationReportParser ..|> SimulationResultSource
+}
+
+package "Persistence — aisafe.persistence.impl" {
+    class JpaSimulationRunRepository
+    class InMemorySimulationRunRepository
+    JpaSimulationRunRepository ..|> SimulationRunRepository
+    InMemorySimulationRunRepository ..|> SimulationRunRepository
+}
+
+package "External aggregates (read-only, by identity)" #EEEEEE {
+    interface FlightRepository <<repository>>
+    interface CustomerCollaboratorRepository <<repository>>
+    class AirControlArea <<aggregate root>>
+}
+
+' --- collaborations ---
+GenerateSimulationReportUI ..> GenerateSimulationReportController
+GenerateSimulationReportController ..> SimulationResultSource
+GenerateSimulationReportController ..> SimulationReportAssembler
+GenerateSimulationReportController ..> SimulationRunRepository
+GenerateSimulationReportController ..> SimulationReportWriter
+GenerateSimulationReportController ..> CustomerCollaboratorRepository : resolve FCO area
+
+SimulationReportAssembler ..> FlightRepository : resolve flights
+SimulationReportAssembler ..> SimulationRun : creates
+SimulationReportWriter ..> SimulationRun : renders
+
+SimulationRun --> AirControlArea : stamped with (by AreaCode)
+
+@enduml

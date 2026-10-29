@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AISafe - Aircraft Models</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260602-routes-toggle">
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar('aircraft-models', ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Reference Data</p>
+          <h1>Aircraft Models</h1>
+          <p class="page-copy">Register and inspect aircraft models including performance specs and certified engine configurations.</p>
+        </div>
+      </header>
+
+      <section class="areas-grid">
+        <article th:replace="~{fragments/table-card :: card(
+            'Registered Aircraft Models',
+            '/aircraft-models/table',
+            '#aircraft-models-tbody',
+            'Refresh aircraft models',
+            ~{::#aircraft-models-head},
+            ~{fragments/aircraft-models :: rows(${snapshot.aircraftModels()})})}">
+          <thead id="aircraft-models-head">
+          <tr>
+            <th>Name</th>
+            <th>Maker</th>
+            <th>Type</th>
+            <th>Motorization</th>
+            <th>Empty Wt (kg)</th>
+            <th>MTOW (kg)</th>
+            <th>Cruise (km/h)</th>
+            <th>Range (km)</th>
+            <th>Engines</th>
+          </tr>
+          </thead>
+        </article>
+
+        <aside class="card form-card">
+          <div class="card-head">
+            <h2>Create Aircraft Model</h2>
+            <span>POST /aircraft-models</span>
+          </div>
+          <div id="form-result"></div>
+          <form hx-post="/aircraft-models" hx-target="#form-result" hx-swap="innerHTML" class="stack">
+            <label>
+              <span>Model Name</span>
+              <input name="modelName" required maxlength="64" placeholder="A320neo">
+            </label>
+
+            <label>
+              <span>Maker</span>
+              <select name="makerName" required>
+                <option value="">Select maker</option>
+                <option th:each="maker : ${snapshot.makers()}"
+                        th:value="${maker.identity()}"
+                        th:text="${maker.identity()}">Airbus</option>
+              </select>
+            </label>
+
+            <div class="form-grid">
+              <label>
+                <span>Aircraft Type</span>
+                <select name="type" required>
+                  <option value="">Select type</option>
+                  <option th:each="at : ${aircraftTypes}"
+                          th:value="${at}"
+                          th:text="${at}">PASSENGER</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Motorization Type</span>
+                <select name="motorizationType" required
+                        hx-get="/aircraft-models/engines-by-motorization"
+                        hx-trigger="change"
+                        hx-target="#engine-select"
+                        hx-swap="innerHTML"
+                        hx-include="[name='motorizationType']">
+                  <option value="">Select motorization</option>
+                  <option th:each="mt : ${motorizationTypes}"
+                          th:value="${mt}"
+                          th:text="${mt}">TURBOFAN</option>
+                </select>
+              </label>
+            </div>
+
+            <label>
+              <span>Certified Engines <small>(Ctrl/Cmd for multi-select)</small></span>
+              <select name="engineIds" multiple required size="4" id="engine-select">
+                <option value="">Select motorization type first</option>
+              </select>
+            </label>
+
+            <div class="form-grid">
+              <label><span>Empty Weight (kg)</span><input name="emptyWeight" type="number" step="0.1" min="0.001" required placeholder="42600"></label>
+              <label><span>MTOW (kg)</span><input name="mtow" type="number" step="0.1" min="0.001" required placeholder="78000"></label>
+              <label><span>MZFW (kg)</span><input name="mzfw" type="number" step="0.1" min="0.001" required placeholder="64500"></label>
+              <label><span>Max Fuel (kg)</span><input name="maxFuelCapacity" type="number" step="0.1" min="0.001" required placeholder="26730"></label>
+            </div>
+
+            <div class="form-grid">
+              <label><span>Service Ceiling (ft)</span><input name="serviceCeiling" type="number" step="1" min="1" required placeholder="39800"></label>
+              <label><span>Cruise Speed (km/h)</span><input name="cruiseSpeed" type="number" step="0.1" min="0.001" required placeholder="828"></label>
+              <label><span>Maximum Range (km)</span><input name="maximumRange" type="number" step="0.1" min="0.001" required placeholder="6300"></label>
+            </div>
+
+            <div class="form-grid">
+              <label><span>Wing Area (m²)</span><input name="wingArea" type="number" step="0.01" min="0.001" required placeholder="122.6"></label>
+              <label><span>Drag Coefficient</span><input name="dragCoefficient" type="number" step="0.0001" min="0.0001" required placeholder="0.0240"></label>
+              <label><span>Lift Coefficient</span><input name="liftCoefficient" type="number" step="0.0001" min="0.0001" required placeholder="1.5200"></label>
+            </div>
+
+            <button type="submit">Create Aircraft Model</button>
+          </form>
+        </aside>
+      </section>
+    </main>
+  </div>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/sortable-table.js"></script>
+</body>
+</html>

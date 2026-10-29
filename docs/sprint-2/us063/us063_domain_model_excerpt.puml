@@ -1,0 +1,62 @@
+@startuml us063_domain_model_excerpt
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+skinparam noteBackgroundColor #FFF8DC
+skinparam noteBorderColor #B8860B
+hide empty members
+
+package "Collaborator Aggregate" {
+    abstract class Collaborator <<aggregate root>>
+    class CompanyCollaborator
+    class AreaCollaborator
+    class Position <<value object>>
+    class Email <<value object>> {
+        - email : String
+    }
+    class PhoneNumber <<value object>> {
+        - number : String
+    }
+    enum CollaboratorStatus <<enum>> {
+        ACTIVE
+        DISABLED
+    }
+
+    CompanyCollaborator --|> Collaborator
+    AreaCollaborator --|> Collaborator
+
+    Collaborator *-- "1 identity\n@EmbeddedId\n(immutable)" Email
+    Collaborator *-- "1 contactEmail\n(editable via US063)" Email
+    Collaborator *-- "1 contactPhoneNumber\n(editable via US063)" PhoneNumber
+    Collaborator *-- Position
+    Collaborator *-- CollaboratorStatus
+
+    note right of Collaborator
+        US063 edits contactEmail and contactPhoneNumber only.
+        Login identity (Email @EmbeddedId), position,
+        customer association, and status are immutable
+        through this use case.
+    end note
+
+    note left of Email
+        Identity email: format-only, no domain restriction.
+        Contact email: same validation rules.
+        The two Email instances are distinct fields.
+    end note
+}
+
+' External aggregates — not modified by this US
+class User #lightgrey
+class AirTransportCompany #lightgrey
+class AirControlArea #lightgrey
+
+Collaborator --> User : identity
+CompanyCollaborator --> AirTransportCompany : references by CompanyIATACode
+AreaCollaborator --> AirControlArea : references by AreaCode
+
+@enduml

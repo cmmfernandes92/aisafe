@@ -1,0 +1,108 @@
+@startuml us058_class_diagram
+title US058 - Remove Engine Model from Aircraft Model Class Diagram
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>> #95A5A6
+    FontColor<<external>> #1A1A1A
+}
+
+' ============================================
+' PRESENTATION (aisafe.app.backoffice.console)
+' ============================================
+package "Presentation" {
+    class RemoveEngineModelFromAircraftModelUI {
+        + doShow() : boolean
+        + headline() : String
+    }
+}
+
+' ============================================
+' APPLICATION (aisafe.core)
+' ============================================
+package "Application" {
+    class RemoveEngineModelFromAircraftModelController <<ApplicationService>> {
+        + allAircraftModels() : Iterable<AircraftModel>
+        + certifiedEnginesOf(AircraftModel) : Iterable<EngineModel>
+        + removeEngine(aircraftModelId : Long, engineModelId : Long) : AircraftModel
+    }
+    note right of RemoveEngineModelFromAircraftModelController
+        TODO (US070): inject AircraftRepository
+        to enforce AC4 cross-aggregate check
+        (no live aircraft using the engine)
+    end note
+}
+
+' ============================================
+' DOMAIN (aisafe.core)
+' ============================================
+package "Domain" {
+    class AircraftModel <<aggregate root>> {
+        + addCertifiedEngine(EngineModel) : void
+        + removeCertifiedEngine(EngineModel) : void
+        + certifiedEngines() : Set<EngineModel>
+        + motorizationType() : MotorizationType
+        + identity() : Long
+    }
+    note right of AircraftModel
+        removeCertifiedEngine() enforces:
+        - engine must not be null
+        - engine must be in certified list
+        - list must not drop to zero (A2)
+    end note
+
+    class EngineModel <<aggregate root>> {
+        + motorizationType() : MotorizationType
+        + engineModelName() : EngineModelName
+        + identity() : Long
+        + sameAs(Object) : boolean
+    }
+
+    interface AircraftModelRepository {
+        + ofIdentity(Long) : Optional<AircraftModel>
+        + findAll() : Iterable<AircraftModel>
+        + save(AircraftModel) : AircraftModel
+    }
+
+    interface EngineModelRepository {
+        + ofIdentity(Long) : Optional<EngineModel>
+    }
+}
+
+' ============================================
+' PERSISTENCE (aisafe.persistence.impl)
+' ============================================
+package "Persistence" {
+    class JpaAircraftModelRepository
+    class InMemoryAircraftModelRepository
+    class JpaEngineModelRepository
+    class InMemoryEngineModelRepository
+}
+
+' ============================================
+' Relationships
+' ============================================
+RemoveEngineModelFromAircraftModelUI ..> RemoveEngineModelFromAircraftModelController : uses
+
+RemoveEngineModelFromAircraftModelController ..> AircraftModelRepository : loads & saves
+RemoveEngineModelFromAircraftModelController ..> EngineModelRepository : queries
+RemoveEngineModelFromAircraftModelController ..> AircraftModel : calls removeCertifiedEngine()
+
+AircraftModel --> "1..*" EngineModel : certifiedEngines
+
+JpaAircraftModelRepository ..|> AircraftModelRepository
+InMemoryAircraftModelRepository ..|> AircraftModelRepository
+JpaEngineModelRepository ..|> EngineModelRepository
+InMemoryEngineModelRepository ..|> EngineModelRepository
+
+@enduml

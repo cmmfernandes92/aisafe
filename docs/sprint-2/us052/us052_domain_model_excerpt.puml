@@ -1,0 +1,65 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>> #95A5A6
+    FontColor<<external>> #1A1A1A
+}
+
+package "Airport Aggregate" {
+    class Airport <<aggregate root>> {
+    }
+    class AirportIATACode <<value object>>
+    class AirportICAOCode <<value object>>
+    class AirportName <<value object>>
+    class Town <<value object>>
+    class Elevation <<value object>>
+    class Coordinates <<value object>> <<external>>
+
+    Airport *-- AirportIATACode
+    Airport *-- AirportICAOCode
+    Airport *-- AirportName
+    Airport *-- Town
+    Airport *-- Elevation
+    Airport *-- Coordinates
+}
+
+' External aggregates referenced by Airport
+package "AirControlArea Aggregate" {
+    class AirControlArea <<aggregate root>> <<external>>
+}
+
+package "Country Aggregate" {
+    class Country <<aggregate root>> <<external>>
+}
+
+Airport --> AirControlArea : belongs to
+Airport --> Country : located in
+
+note right of Airport
+  Invariants:
+  - AirportIATACode unique worldwide (3 letters)
+  - AirportICAOCode unique worldwide (4 letters)
+  - airportName, town not blank
+  - elevation in metres above sea level (negatives allowed)
+  - Coordinates must fall within associated
+    AirControlArea boundaries
+  - Country must reference bootstrapped data
+end note
+
+note bottom of Coordinates
+  Range enforced at construction:
+  latitude in [-90, 90]
+  longitude in [-180, 180]
+end note
+
+@enduml

@@ -1,0 +1,25 @@
+@startuml
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+left to right direction
+
+package "AirTransportCompany Aggregate" {
+    class AirTransportCompany <<aggregate root>> {
+        companyName
+    }
+    class CompanyIATACode <<value object>>
+    class CompanyICAOCode <<value object>>
+
+    AirTransportCompany *-- CompanyIATACode
+    AirTransportCompany *-- CompanyICAOCode
+}
+
+@enduml

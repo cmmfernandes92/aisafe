@@ -1,0 +1,135 @@
+@startuml us120_domain_model_excerpt
+title Team Domain Model — Excerpt Relevant to US120 (Flight DSL Semantic Validation)
+caption Subset extracted from the team's conceptual Domain Model\n(docs/sprint-3/domain-model/domain-model.puml).\n\nThis excerpt is the *target* model that the Flight DSL describes —\nthe US120 semantic validator does **not** load these aggregates from\npersistence; it operates on the AST (see class diagram) whose nodes\nmirror the concepts shown here one-to-one. Implementation status of\neach class is independent of US120.
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor      #5B9BD5
+skinparam packageStyle           rectangle
+skinparam packageBorderColor     #888888
+skinparam defaultFontSize        11
+hide empty members
+left to right direction
+
+' ============================================================
+' Flight Aggregate — the semantic validator reads and validates
+' the AST representation of this aggregate's structure.
+' ============================================================
+package "Flight Aggregate" {
+    class Flight <<aggregate root>>
+    class FlightDesignator <<value object>>
+    abstract class Departure <<value object>>
+    class CharterDeparture <<value object>>
+    class RegularDeparture <<value object>>
+
+    class FlightPlan <<entity>> {
+        flightPlanID
+    }
+    class FlightLeg <<entity>>
+    class DepartureInfo <<value object>>
+    class ArrivalInfo <<value object>>
+    class FuelLoad <<value object>>
+    class FlightSegment <<entity>>
+    class Waypoint <<value object>>
+    class Coordinates <<value object>>
+    class AltitudeSlot <<value object>>
+    class WindDirection <<value object>>
+    class WindSpeed <<value object>>
+    enum FlightPlanStatus <<enum>> {
+        DRAFT
+        VALIDATED
+        TESTED
+    }
+
+    CharterDeparture --|> Departure
+    RegularDeparture --|> Departure
+
+    Flight *-- FlightDesignator
+    Flight *-- Departure
+    Flight *-- "1..*" FlightPlan
+
+    FlightPlan *-- FlightPlanStatus
+    FlightPlan *-- "1..*" FlightLeg
+
+    FlightLeg *-- DepartureInfo
+    FlightLeg *-- ArrivalInfo
+    FlightLeg *-- FuelLoad
+    FlightLeg *-- "1..*" FlightSegment
+
+    FlightSegment *-- "2" Waypoint : start, end
+    FlightSegment *-- "1..*" AltitudeSlot
+    FlightSegment *-- WindDirection
+    FlightSegment *-- WindSpeed
+
+    Waypoint *-- Coordinates
+}
+
+' ============================================================
+' Airport Aggregate — referenced by departures/arrivals
+' ============================================================
+package "Airport Aggregate" {
+    class Airport <<aggregate root>>
+    class AirportIATACode <<value object>>
+    class AirportICAOCode <<value object>>
+
+    Airport *-- AirportIATACode
+    Airport *-- AirportICAOCode
+}
+
+' ============================================================
+' FlightRoute Aggregate — validated at flight level
+' ============================================================
+package "FlightRoute Aggregate" {
+    class FlightRoute <<aggregate root>>
+    class RouteName <<value object>>
+
+    FlightRoute *-- RouteName
+}
+
+' ============================================================
+' Cross-aggregate references used by the semantic rules
+' ============================================================
+Flight         --> FlightRoute     : for route
+DepartureInfo  --> Airport         : from
+ArrivalInfo    --> Airport         : to
+FlightRoute    --> "2" Airport     : origin, destination
+
+' ============================================================
+' Mapping note for US120 semantic rules
+' ============================================================
+note as MappingNote
+  **What the semantic validator checks against the domain**
+
+  **Flight-level rules (FlightLevelRule)**
+   • FlightDesignator must be unique → S: FLIGHT_ID_NOT_UNIQUE
+   • Flight type must be REGULAR or CHARTER → S: FLIGHT_TYPE_INVALID
+
+  **Leg-level rules (LegLevelRule)**
+   • Each FlightPlan has ≥1 FlightLeg → S: FLIGHT_MISSING_LEGS
+   • Each FlightLeg has DepartureInfo/ArrivalInfo/FuelLoad/Segments
+   • FuelLoad quantity > 0 → S: FUEL_NOT_POSITIVE
+
+  **Leg-sequence rules (LegSequenceRule)**
+   • ArrivalInfo airport of leg n = DepartureInfo airport of leg n+1
+     → S: LEG_SEQUENCE_AIRPORT_MISMATCH
+   • Arrival time of leg n < departure time of leg n+1
+     → S: LEG_SEQUENCE_TIME_NOT_ORDERED
+
+  **Route-coherence rules (RouteCoherenceRule)**
+   • FlightRoute origin = first-leg departure airport
+     → S: ROUTE_ORIGIN_MISMATCH
+   • FlightRoute destination = last-leg arrival airport
+     → S: ROUTE_DESTINATION_MISMATCH
+   • No airport visited twice → S: ROUTE_AIRPORT_REPEATED
+
+  **Segment-coherence rules (SegmentCoherenceRule)**
+   • Waypoint start ≠ Waypoint end → S: SEGMENT_START_EQUALS_END
+
+  **Domain-consistency rules (DomainConsistencyRule)**
+   • AirportIATACode/AirportICAOCode format → S: AIRPORT_CODE_BAD_FORMAT
+   • AltitudeSlot/WindSpeed positive → S: NUMERIC_NOT_POSITIVE
+   • DepartureInfo/ArrivalInfo datetime valid → S: DATETIME_INVALID_CALENDAR
+end note
+
+MappingNote .. FlightPlan
+@enduml

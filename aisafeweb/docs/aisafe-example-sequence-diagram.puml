@@ -1,0 +1,134 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam ParticipantBackgroundColor #CFE2F3
+skinparam ParticipantBorderColor #7B241C
+skinparam ParticipantFontColor #1A2B3C
+skinparam ActorBackgroundColor #CFE2F3
+skinparam ActorBorderColor #7B241C
+skinparam DatabaseBackgroundColor #CFE2F3
+skinparam DatabaseBorderColor #7B241C
+skinparam SequenceLifeLineBorderColor #7B241C
+skinparam ArrowColor #7B241C
+skinparam noteBorderColor #7B241C
+skinparam noteBackgroundColor #EAF2FB
+skinparam actorStyle awesome
+
+actor "Backoffice Operator" as BO 
+
+box "aisafeweb (Web Adapter)" #F4F9FE
+  participant "AirportController" as Ctrl
+  participant "AisafeWebSession" as Session
+  participant "AirportCommandService" as CmdSvc
+end box
+
+box "aisafe.core (reused)" #FDF6EC
+  participant "AuthenticationService" as AuthN
+  participant "PersistenceContext" as PCtx
+  participant "JpaRepositoryFactory" as Factory
+  participant "RegisterAirportController" as RegCtrl
+  participant "AuthorizationService" as AuthZ
+  participant "Airport VOs\n(ICAO/IATA/Name/...)" as VOs
+  participant "AirportRepository" as AirRepo
+  participant "CountryRepository" as CtryRepo
+  participant "AirControlAreaRepository" as AreaRepo
+  participant "GeographicBoundary" as Boundary
+end box
+
+database "H2 (eapli.aisafe)" as DB
+
+BO -> Ctrl : POST /airports (form fields)
+activate BO
+activate Ctrl
+
+Ctrl -> Session : authenticateForControllerCall(session)
+activate Session
+Session -> AuthN : authenticate(username, password)
+activate AuthN
+AuthN --> Session : Optional<UserSession>
+deactivate AuthN
+Session --> Ctrl
+deactivate Session
+
+Ctrl -> CmdSvc : register(...)
+activate CmdSvc
+
+CmdSvc -> PCtx : repositories().airports()
+activate PCtx
+PCtx -> Factory : airports()
+activate Factory
+Factory --> PCtx : JpaAirportRepository
+deactivate Factory
+PCtx --> CmdSvc : JpaAirportRepository
+deactivate PCtx
+
+CmdSvc -> PCtx : repositories().airControlAreas()
+activate PCtx
+PCtx --> CmdSvc : JpaAirControlAreaRepository
+deactivate PCtx
+
+CmdSvc -> PCtx : repositories().countries()
+activate PCtx
+PCtx --> CmdSvc : JpaCountryRepository
+deactivate PCtx
+
+CmdSvc -> RegCtrl : new(airportRepo, areaRepo, countryRepo)
+CmdSvc -> RegCtrl : registerAirport(...)
+activate RegCtrl
+
+RegCtrl -> AuthZ : ensureAuthenticatedUserHasAnyOf(POWER_USER, BACKOFFICE_OPERATOR)
+activate AuthZ
+AuthZ --> RegCtrl : ok
+deactivate AuthZ
+
+RegCtrl -> VOs : new(icao, iata, name, town, elevation, coords, countryCode, areaCode)
+activate VOs
+VOs --> RegCtrl : value objects
+deactivate VOs
+
+RegCtrl -> AirRepo : findByIcaoCode(...)
+activate AirRepo
+AirRepo --> RegCtrl : Optional.empty
+deactivate AirRepo
+RegCtrl -> AirRepo : findByIataCode(...)
+activate AirRepo
+AirRepo --> RegCtrl : Optional.empty
+deactivate AirRepo
+
+RegCtrl -> CtryRepo : findByCode(...)
+activate CtryRepo
+CtryRepo --> RegCtrl : Optional<Country>
+deactivate CtryRepo
+RegCtrl -> AreaRepo : findByCode(...)
+activate AreaRepo
+AreaRepo --> RegCtrl : Optional<AirControlArea>
+deactivate AreaRepo
+
+RegCtrl -> Boundary : contains(coordinates)
+activate Boundary
+Boundary --> RegCtrl : true
+deactivate Boundary
+
+RegCtrl -> VOs : new Airport(...)
+activate VOs
+VOs --> RegCtrl : Airport
+deactivate VOs
+
+RegCtrl -> AirRepo : save(airport)
+activate AirRepo
+AirRepo -> DB : INSERT/UPDATE via JPA/Hibernate
+activate DB
+DB --> AirRepo : ok
+deactivate DB
+AirRepo --> RegCtrl : saved Airport
+deactivate AirRepo
+
+RegCtrl --> CmdSvc : Airport
+deactivate RegCtrl
+CmdSvc --> Ctrl : void
+deactivate CmdSvc
+
+Ctrl --> BO : fragments/form :: result(success)
+deactivate Ctrl
+deactivate BO
+@enduml

@@ -1,0 +1,36 @@
+@startuml state-machine-us085
+title US085 – FlightPlan status lifecycle (US085 owns VALIDATED → TESTED)
+
+skinparam defaultFontSize 12
+skinparam state {
+    BackgroundColor #D6EAF8
+    BorderColor #5B9BD5
+    FontColor #1A1A1A
+}
+
+[*] --> DRAFT : create flight (US080)
+
+DRAFT --> VALIDATED : import & validate DSL\n(US121 – lex/syn/sem, US120)
+
+VALIDATED --> TESTED : **test passes (US085)**\n§3.3 fuel + altitude OK,\ndeparture consistent
+
+VALIDATED --> VALIDATED : test fails (US085) /\nstate unchanged (R5)
+
+TESTED --> VALIDATED : attach / detach / swap weather\n(US082 – voids the test, not the DSL)
+
+DRAFT --> VALIDATED : re-import (US121)
+VALIDATED --> DRAFT : re-import supersedes DSL\n(US121 – demote)
+
+note right of TESTED
+  Reached only by US085's guarded
+  Flight.testCurrentPlan() → FlightPlan.markTested():
+  promotes ONLY a VALIDATED plan (Invariant, R4).
+end note
+
+note bottom of VALIDATED
+  US085 recompiles the immutable DSL blob and overlays the
+  pilot's attached weather; the parsed structure is derived
+  on demand, never persisted (design-notes §1).
+end note
+
+@enduml

@@ -1,0 +1,70 @@
+@startuml
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+autonumber
+
+title Register Weather Data for a Specific Air Control Area (US041)
+
+actor "Weather Person" as WP
+participant ":RegisterWeatherDataUI" as UI <<presentation>>
+participant ":RegisterWeatherDataController" as CTRL <<application>>
+participant ":AirControlAreaRepository" as ACAR <<persistence>>
+participant ":WeatherData" as WD <<domain>>
+participant ":WeatherDataRepository" as WDR <<persistence>>
+
+activate WP
+
+WP -> UI : asks to register\nweather data
+activate UI
+
+UI -> CTRL : create()
+activate CTRL
+
+CTRL -> ACAR : findAll()
+activate ACAR
+ACAR --> CTRL : airControlAreas
+deactivate ACAR
+
+CTRL --> UI : airControlAreas
+
+UI --> WP : shows list of\nair control areas
+deactivate UI
+
+WP -> UI : selects air control area
+activate UI
+UI --> WP : requests weather data\n(date, temperature, pressure,\nwind speed, wind direction,\nvisibility, data source)
+deactivate UI
+
+WP -> UI : enters weather data
+activate UI
+
+UI -> CTRL : registerWeatherData(areaCode,\ndate, temperature, pressure,\nwindSpeed, windDirection,\nvisibility, dataSource)
+
+CTRL -> ACAR : findByAreaCode(areaCode)
+activate ACAR
+ACAR --> CTRL : airControlArea
+deactivate ACAR
+
+CTRL -> WD ** : create(airControlArea, date,\ntemperature, pressure,\nwindSpeed, windDirection,\nvisibility, dataSource)
+'note right of WD
+'  Constructor validates:
+'  - physically valid ranges
+'  - wind direction 0-360
+'  - wind speed >= 0
+'  - valid date
+'end note
+
+CTRL -> WDR : save(weatherData)
+activate WDR
+WDR --> CTRL : weatherData
+deactivate WDR
+
+CTRL --> UI : weatherData
+deactivate CTRL
+
+UI --> WP : shows registered\nweather data
+deactivate UI
+
+deactivate WP
+
+@enduml

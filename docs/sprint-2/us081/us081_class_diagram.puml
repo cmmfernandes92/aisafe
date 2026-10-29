@@ -1,0 +1,113 @@
+@startuml us081-implementation
+title US081 - Create Flight Plan from File — Class Diagram
+
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam packageStyle rectangle
+hide empty members
+left to right direction
+
+' ============================================================
+' Presentation layer (pilot console)
+' ============================================================
+package "eapli.aisafe.app.pilot.console.presentation.flightplan" {
+    class ImportFlightPlanAction {
+        +execute() : boolean
+    }
+    class ImportFlightPlanUI {
+        -controller : ImportFlightPlanController
+        +doShow() : boolean
+        +headline() : String
+    }
+
+    ImportFlightPlanAction ..> ImportFlightPlanUI : creates & shows
+}
+
+' ============================================================
+' Application layer
+' ============================================================
+package "eapli.aisafe.flightplanmanagement.application" {
+    class ImportFlightPlanController <<UseCaseController>> {
+        -repository : FlightPlanRepository
+        -authz : AuthorizationService
+        +importFlightPlan(designator, rawDslContent) : FlightPlan
+    }
+}
+
+' ============================================================
+' Domain layer
+' ============================================================
+package "eapli.aisafe.flightplanmanagement.domain" {
+    class FlightPlan <<aggregate root>> <<entity>> {
+        -id : FlightPlanId
+        -rawDslContent : String
+        -importedAt : LocalDateTime
+        -importedBy : String
+        +identity() : FlightPlanId
+        +rawDslContent() : String
+        +importedAt() : LocalDateTime
+        +importedBy() : String
+    }
+
+    class FlightPlanId <<value object>> <<embeddable>> {
+        -value : String
+        +valueOf(String) : FlightPlanId
+        +value() : String
+    }
+
+    FlightPlan *-- FlightPlanId
+}
+
+' ============================================================
+' Repository
+' ============================================================
+package "eapli.aisafe.flightplanmanagement.repositories" {
+    interface FlightPlanRepository <<interface>> {
+        +ofIdentity(FlightPlanId) : Optional<FlightPlan>
+        +save(FlightPlan) : FlightPlan
+    }
+}
+
+' ============================================================
+' US083 DSL module — consumed by UI, not by controller
+' ============================================================
+package "eapli.aisafe.flightplanmanagement.dsl" <<external>> #FFF8DC {
+    class FlightDslCompiler {
+        +compile(Path) : CompilationResult
+        +importFrom(InputStream, String) : CompilationResult
+    }
+    class CompilationResult <<record>> {
+        +ok() : boolean
+        +file() : Optional<FlightPlanFile>
+        +errors() : List<DslError>
+    }
+    class DslError <<record>> {
+        +phase() : Phase
+        +code() : String
+        +line() : int
+        +column() : int
+        +message() : String
+    }
+    class FlightPlanDTO <<record>> {
+        +designator() : FlightDesignator
+        +type() : FlightType
+        +route() : Route
+        +legs() : List<FlightLeg>
+    }
+
+    FlightDslCompiler ..> CompilationResult : produces
+    CompilationResult o-- "*" DslError
+    CompilationResult o-- FlightPlanDTO
+}
+
+' ============================================================
+' Cross-layer wiring
+' ============================================================
+ImportFlightPlanUI ..> ImportFlightPlanController  : uses
+ImportFlightPlanUI ..> FlightDslCompiler           : validates file
+ImportFlightPlanUI ..> FlightPlanDTO               : reads summary
+
+ImportFlightPlanController ..> FlightPlanRepository : saves
+ImportFlightPlanController ..> FlightPlan           : creates
+
+@enduml

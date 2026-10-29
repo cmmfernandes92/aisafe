@@ -1,0 +1,148 @@
+@startuml us070_class_diagram
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>> #95A5A6
+    FontColor<<external>> #1A1A1A
+}
+
+' ============================================
+' PRESENTATION (aisafe.app.atcc.console)
+' ============================================
+package "Presentation" {
+    class MainMenu <<external>> {
+        + buildMainMenu()
+    }
+    class AddAircraftAction {
+        + execute() : boolean
+    }
+    class AddAircraftUI {
+        + doShow() : boolean
+    }
+}
+
+' ============================================
+' APPLICATION (aisafe.core)
+' ============================================
+package "Application" {
+    class AddAircraftController <<UseCaseController>> {
+        + authenticatedCompany() : AirTransportCompany
+        + listModels() : Iterable<AircraftModel>
+        + addAircraft(registration, modelId, seats,\ncountry, crewCount) : Aircraft
+    }
+}
+
+' ============================================
+' DOMAIN (aisafe.core)
+' ============================================
+package "Domain" {
+    class Aircraft <<aggregate root>> {
+        + identity() : Registration
+        + status() : OperationalStatus
+        + decommission() : void
+    }
+    class Registration <<value object>>
+    class CabinConfiguration <<value object>> {
+        + totalSeats() : int
+    }
+    class EconomySeats <<value object>>
+    class BusinessSeats <<value object>>
+    class FirstClassSeats <<value object>>
+    class Country <<value object>>
+    enum SeatClass <<enum>> {
+        ECONOMY
+        BUSINESS
+        FIRST
+    }
+    enum OperationalStatus <<enum>> {
+        ACTIVE
+        RETIRED
+    }
+    interface AircraftRepository {
+        + save(Aircraft) : Aircraft
+        + findByRegistration(Registration) : Optional<Aircraft>
+        + findAllByCompany(companyId) : Iterable<Aircraft>
+        + containsOfIdentity(Registration) : boolean
+    }
+
+    ' External — resolved from authenticated user
+    class CompanyCollaborator <<external>>
+    interface CompanyCollaboratorRepository <<external>> {
+        + findByUser(username) : Optional<CompanyCollaborator>
+    }
+
+    ' External — aircraft model lookup
+    class AircraftModel <<external>>
+    interface AircraftModelRepository <<external>> {
+        + findAll() : Iterable<AircraftModel>
+        + findById(modelId) : Optional<AircraftModel>
+    }
+}
+
+' ============================================
+' INFRASTRUCTURE (eapli.framework)
+' ============================================
+package "Infrastructure" {
+    class AuthorizationService <<external>> {
+        + loggedinUserWithPermission(role) : SystemUser
+    }
+}
+
+' ============================================
+' PERSISTENCE (aisafe.persistence.impl)
+' ============================================
+package "Persistence" {
+    class InMemoryAircraftRepository
+    class JpaAircraftRepository
+}
+
+' ============================================
+' BOOTSTRAP (aisafe.bootstrappers)
+' ============================================
+package "Bootstrap" {
+    class AircraftBootstrapper {
+        + execute() : boolean
+    }
+}
+
+' ============================================
+' Relationships
+' ============================================
+MainMenu --> AddAircraftAction : registers
+AddAircraftAction ..> AddAircraftUI : invokes
+AddAircraftUI ..> AddAircraftController : uses
+
+AddAircraftController ..> AuthorizationService : gets logged-in user
+AddAircraftController ..> CompanyCollaboratorRepository : resolves company
+AddAircraftController ..> AircraftModelRepository : lists models
+AddAircraftController ..> AircraftRepository : uses
+AddAircraftController ..> Aircraft : creates
+
+Aircraft *-- Registration
+Aircraft *-- CabinConfiguration
+Aircraft *-- Country
+Aircraft *-- OperationalStatus
+
+CabinConfiguration *-- "1" EconomySeats
+CabinConfiguration *-- "0..1" BusinessSeats
+CabinConfiguration *-- "0..1" FirstClassSeats
+CabinConfiguration ..> SeatClass : uses
+
+Aircraft --> AircraftModel : references by id
+
+InMemoryAircraftRepository ..|> AircraftRepository
+JpaAircraftRepository ..|> AircraftRepository
+
+AircraftBootstrapper ..> AddAircraftController : uses
+
+@enduml

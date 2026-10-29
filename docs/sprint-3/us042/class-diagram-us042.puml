@@ -1,0 +1,202 @@
+@startuml class-diagram-us042
+title US042 – Import bulk weather data (design)
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>> #95A5A6
+    FontColor<<external>> #1A1A1A
+    BackgroundColor<<new>> #D5F5E3
+    BorderColor<<new>> #58D68D
+}
+
+' ============================================
+' PRESENTATION (aisafe.app.weather.console)
+' ============================================
+package "Presentation" {
+    class ImportWeatherDataAction <<Command>> {
+        + execute() : boolean
+    }
+    class ImportWeatherDataUI {
+        + doShow() : boolean
+    }
+}
+
+' ============================================
+' APPLICATION (aisafe.core)
+' ============================================
+package "Application" {
+    class ImportBulkWeatherDataController <<UseCaseController>> {
+        + importFrom(areaCode, sourceType,\ndataSource, input) : ImportReport
+    }
+
+    interface WeatherDataSourceReader <<Strategy>> {
+        + read(request) : List<RawWeatherReading>
+    }
+    class WeatherDataSourceReaderFactory <<Factory>> {
+        + readerFor(sourceType) : WeatherDataSourceReader
+    }
+    enum SourceType <<enum>> {
+        CSV
+        OPEN_METEO
+    }
+    class WeatherImportRequest <<DTO>> <<new>> {
+        + file() : Optional<Reader>
+        + areaBounds() : GeographicBoundary
+        + day() : LocalDate
+        + start() : LocalTime
+        + end() : LocalTime
+    }
+    class RawWeatherReading <<DTO>>
+    class ImportReport <<DTO>> {
+        + imported() : int
+        + skipped() : int
+        + errors() : List<RowError>
+    }
+}
+
+' ============================================
+' APPLICATION – CSV adapter (aisafe.core)
+' ============================================
+package "Application.csv" {
+    class CsvWeatherDataSourceReader <<Adapter>> {
+        + read(request) : List<RawWeatherReading>
+    }
+}
+
+' ============================================
+' APPLICATION – Open-Meteo adapter (aisafe.core)
+' ============================================
+package "Application.openmeteo" {
+    class OpenMeteoWeatherDataSourceReader <<Adapter>> <<new>> {
+        + read(request) : List<RawWeatherReading>
+    }
+    interface OpenMeteoClient <<port>> <<new>> {
+        + fetch(uri) : String
+    }
+    class HttpOpenMeteoClient <<new>> {
+        + fetch(uri) : String
+    }
+}
+
+' ============================================
+' DOMAIN – WeatherData Aggregate (aisafe.core)
+' reused from US041; <<new>> = US042 deltas
+' ============================================
+package "Domain" {
+    class WeatherData <<aggregate root>> {
+        - temperature : Double [optional]
+        - pressure : Double [optional]
+        - visibility : Double [optional]
+    }
+    class WeatherZone <<value object>> <<new>>
+    class AltitudeBand <<value object>> <<new>>
+    class TimePeriod <<value object>>
+    class WeatherWindSpeed <<value object>>
+    class WeatherWindDirection <<value object>>
+    class DataSource <<value object>>
+
+    interface WeatherDataRepository {
+        + save(WeatherData) : WeatherData
+    }
+
+    ' Referenced aggregate – read-only, resolved at the application layer
+    class AirControlArea <<aggregate root>> <<external>>
+    interface AirControlAreaRepository <<external>> {
+        + findByCode(areaCode) : Optional<AirControlArea>
+    }
+}
+
+' ============================================
+' PERSISTENCE (aisafe.persistence.impl)
+' ============================================
+package "Persistence" {
+    class JpaWeatherDataRepository
+    class InMemoryWeatherDataRepository
+    interface RepositoryFactory <<external>> {
+        + newTransactionalContext() : TransactionalContext
+        + weatherData(autoTx) : WeatherDataRepository
+    }
+}
+
+' ============================================
+' Relationships
+' ============================================
+ImportWeatherDataAction ..> ImportWeatherDataUI : launches
+ImportWeatherDataUI ..> ImportBulkWeatherDataController : uses
+
+ImportBulkWeatherDataController ..> WeatherDataSourceReaderFactory : selects reader
+ImportBulkWeatherDataController ..> WeatherDataSourceReader : reads source
+ImportBulkWeatherDataController ..> WeatherImportRequest : <<creates>> (area box + file/window)
+ImportBulkWeatherDataController ..> AirControlAreaRepository : resolves area (I1)
+ImportBulkWeatherDataController ..> WeatherDataRepository : saves valid records
+ImportWeatherDataUI ..> RepositoryFactory : obtains tx + repo, injects into controller (TP6)
+ImportBulkWeatherDataController ..> WeatherData : <<creates>>
+ImportBulkWeatherDataController ..> ImportReport : <<creates>>
+
+WeatherDataSourceReaderFactory ..> WeatherDataSourceReader : <<creates>>
+WeatherDataSourceReaderFactory ..> SourceType
+CsvWeatherDataSourceReader ..|> WeatherDataSourceReader
+OpenMeteoWeatherDataSourceReader ..|> WeatherDataSourceReader
+OpenMeteoWeatherDataSourceReader ..> OpenMeteoClient : samples grid via HTTP
+HttpOpenMeteoClient ..|> OpenMeteoClient
+WeatherDataSourceReader ..> WeatherImportRequest : reads
+WeatherDataSourceReader ..> RawWeatherReading : yields
+
+WeatherData *-- WeatherZone
+WeatherData *-- TimePeriod
+WeatherData *-- WeatherWindSpeed
+WeatherData *-- WeatherWindDirection
+WeatherData *-- DataSource
+WeatherZone *-- AltitudeBand
+WeatherData ..> AirControlArea : for area (by AreaCode)
+
+JpaWeatherDataRepository ..|> WeatherDataRepository
+InMemoryWeatherDataRepository ..|> WeatherDataRepository
+
+note bottom of WeatherDataSourceReader
+  Strategy port (T8). The reader takes a
+  WeatherImportRequest (the operator's file or time
+  window + the resolved area boundary), so a file
+  reader and an API adapter satisfy one contract.
+  CSV and Open-Meteo are the two concretes; a new
+  source is a new implementation selected by the
+  factory, controller unedited (OCP, Protected
+  Variation). A concrete is also an Adapter and the
+  T9 security boundary.
+end note
+
+note bottom of OpenMeteoWeatherDataSourceReader
+  Adapter for a keyless HTTP source. Imposes a fixed-
+  resolution grid over the area boundary, samples each
+  cell centroid, maps altitude bands -> pressure
+  levels, and normalizes into the same RawWeatherReading.
+  HTTP sits behind OpenMeteoClient so unit tests use
+  canned JSON (no network).
+end note
+
+note bottom of WeatherDataRepository
+  DIP (TP6): interface owned by the domain,
+  JPA + in-memory impls in persistence.impl,
+  injected at the console. The batch shares one
+  TransactionalContext via weatherData(autoTx).
+end note
+
+note bottom of WeatherData
+  Per-record invariants enforced at construction
+  (Preconditions -> IllegalArgumentException);
+  the controller catches per row and records a skip
+  (fail-soft, I9). No uniqueness across
+  (area, zone, band, period) – I8.
+end note
+
+@enduml

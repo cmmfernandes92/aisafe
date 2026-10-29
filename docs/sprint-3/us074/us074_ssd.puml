@@ -1,0 +1,54 @@
+@startuml ssd-us074
+title US074 — System Sequence Diagram: Deactivate a Flight Route
+
+skinparam sequenceArrowThickness 1
+skinparam roundcorner 6
+skinparam ParticipantPadding 10
+
+actor "Air Transport Company\nCollaborator" as atcc
+participant ":System" as sys
+
+activate atcc
+
+atcc -> sys : starts "Deactivate flight route"
+activate sys
+sys --> atcc : list of this company's active routes
+deactivate sys
+
+atcc -> sys : deactivateFlightRoute(routeName, deactivatedFrom)
+activate sys
+
+note right of sys
+  routeName: an active route owned by the
+             collaborator's company (e.g. "TP123")
+  deactivatedFrom: date from which the route
+             is no longer usable
+end note
+
+sys --> atcc : confirms inputs received
+
+sys -> sys : resolve route from routeName
+activate sys
+deactivate sys
+sys -> sys : verify route belongs to the\ncollaborator's company
+activate sys
+deactivate sys
+sys -> sys : verify route is currently active
+activate sys
+deactivate sys
+sys -> sys : check no planned flights exist\non/after deactivatedFrom
+activate sys
+deactivate sys
+sys -> sys : deactivate route from deactivatedFrom
+activate sys
+deactivate sys
+sys -> sys : persist FlightRoute
+activate sys
+deactivate sys
+
+sys --> atcc : "Flight route [routeName] deactivated\nfrom [deactivatedFrom]"
+deactivate sys
+
+deactivate atcc
+
+@enduml

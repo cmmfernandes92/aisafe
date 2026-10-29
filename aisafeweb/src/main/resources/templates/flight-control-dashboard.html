@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AISafe - Flight Control</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260612-flight-control">
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar('dashboard', ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Flight Control</p>
+          <h1 th:if="${area != null}" th:text="|My Area — ${area.code()} · ${area.name()}|">My Area — LPPC · Lisbon ACC</h1>
+          <h1 th:if="${area == null}">Flight Control</h1>
+          <p class="page-copy">
+            Decide what to run next: the TESTED flights crossing your control area are
+            candidates for an area simulation. Once a simulation produces a report, its
+            outcome and the monthly rollup surface here.
+          </p>
+          <p class="page-copy error" th:if="${area == null}">
+            No control area is assigned to your account, so candidate flights can't be
+            scoped. Ask an administrator to register you as an area collaborator.
+          </p>
+        </div>
+      </header>
+
+      <!-- KPIs: My Area + candidates are real; simulation + weather are placeholders -->
+      <section class="kpi-grid">
+        <article class="card kpi">
+          <span>My Area</span>
+          <strong th:text="${area != null ? area.code() : '—'}">LPPC</strong>
+          <small th:text="${area != null ? area.name() : 'No area assigned'}">Lisbon ACC</small>
+        </article>
+        <article class="card kpi" th:classappend="${!#lists.isEmpty(candidates)} ? ' kpi-accent' : ''">
+          <span>To Simulate</span>
+          <strong th:text="${#lists.size(candidates)}">0</strong>
+          <small>TESTED flights crossing your area · next 24h</small>
+        </article>
+        <article class="card kpi">
+          <span>Last Area Simulation</span>
+          <strong>—</strong>
+          <small>Awaiting the simulation-report pipeline (US111)</small>
+        </article>
+        <article class="card kpi">
+          <span>Weather Coverage</span>
+          <strong>—</strong>
+          <small>Coming online</small>
+        </article>
+      </section>
+
+      <section class="grid-two">
+        <!-- Candidates to simulate — REAL data -->
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <p class="eyebrow">Decision input</p>
+              <h2>Candidates to Simulate</h2>
+            </div>
+            <span th:text="|${#lists.size(candidates)} TESTED · next 24h|">0 TESTED · next 24h</span>
+          </div>
+
+          <table class="sortable-table">
+            <thead>
+            <tr>
+              <th>Route</th>
+              <th>Departure</th>
+              <th>Aircraft</th>
+              <th>Plan</th>
+              <th>Segs in area</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="c : ${candidates}">
+              <td class="mono" th:text="${c.route()}">TP123</td>
+              <td class="mono" th:text="${c.departure()}">2026-06-12T13:00</td>
+              <td class="mono" th:text="${c.aircraft()}">CS-TUA</td>
+              <td class="mono" th:text="${c.designator()}">FR401</td>
+              <td class="mono" th:text="${c.segmentsInArea()}">2</td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(candidates)}">
+              <td colspan="5" class="empty" th:text="${area != null}
+                    ? 'No TESTED flights cross your area in the next 24h.'
+                    : 'Assign a control area to see candidate flights.'">No candidates.</td>
+            </tr>
+            </tbody>
+          </table>
+
+          <div class="fc-cta">
+            <button type="button" disabled>Run area simulation</button>
+            <span class="fc-soon">Egress US — not yet wired</span>
+          </div>
+        </article>
+
+        <!-- Next actions (pipeline) — driven by real candidate count + placeholders -->
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <p class="eyebrow">What to run next</p>
+              <h2>Pipeline</h2>
+            </div>
+          </div>
+          <ul class="fc-pipeline">
+            <li th:classappend="${!#lists.isEmpty(candidates)} ? ' active' : ''">
+              <strong th:text="|${#lists.size(candidates)} TESTED flight(s) pending|">0 TESTED flights pending</strong>
+              <span>Run an area simulation for your sector <em class="fc-soon">egress US</em></span>
+            </li>
+            <li>
+              <strong>Reports awaiting ingest</strong>
+              <span>Parse a SCOMP <code>report.txt</code> into a stored run <em class="fc-soon">US111</em></span>
+            </li>
+            <li>
+              <strong>Weather coverage check</strong>
+              <span>Confirm your area is covered for the sim window <em class="fc-soon">US043</em></span>
+            </li>
+            <li>
+              <strong>Monthly statistics</strong>
+              <span>Aggregate this month's runs for your area <em class="fc-soon">US112</em></span>
+            </li>
+          </ul>
+        </article>
+      </section>
+
+      <!-- Recent area simulations — placeholder until US111 persists runs -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">History</p>
+            <h2>Recent Area Simulations</h2>
+          </div>
+          <span>Your sector</span>
+        </div>
+        <div class="lifecycle-empty">
+          No simulation runs yet — runs appear here once the report-ingest pipeline (US111) lands.
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/sortable-table.js"></script>
+</body>
+</html>

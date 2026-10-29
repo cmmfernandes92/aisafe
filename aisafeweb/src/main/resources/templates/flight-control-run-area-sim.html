@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AISafe - Run Area Simulation</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260612-area-sim">
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar('run-area-simulation', ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Flight Control</p>
+          <h1>Run Area Simulation</h1>
+          <p class="page-copy" th:if="${area != null}"
+             th:text="|${area.code()} · ${area.name()}|">LPPC · Lisboa FIR</p>
+          <p class="page-copy error" th:if="${area == null}">
+            No control area is assigned to your account.
+          </p>
+        </div>
+      </header>
+
+      <section class="kpi-grid">
+        <article class="card kpi">
+          <span>My Area</span>
+          <strong th:text="${area != null ? area.code() : '-'}">LPPC</strong>
+          <small th:text="${area != null ? area.name() : 'No area assigned'}">Lisboa FIR</small>
+        </article>
+        <article class="card kpi" th:classappend="${!#lists.isEmpty(candidates)} ? ' kpi-accent' : ''">
+          <span>Candidates</span>
+          <strong th:text="${#lists.size(candidates)}">4</strong>
+          <small>TESTED flights in the selected window</small>
+        </article>
+        <article class="card kpi">
+          <span>Engine</span>
+          <strong>SCOMP</strong>
+          <small>Native flight_sim runner</small>
+        </article>
+      </section>
+
+      <section class="areas-grid">
+        <article class="card table-card">
+          <div class="card-head">
+            <div>
+              <p class="eyebrow">Simulation input</p>
+              <h2>Candidate Flights</h2>
+            </div>
+            <span th:text="|${#lists.size(candidates)} TESTED|">4 TESTED</span>
+          </div>
+          <div id="area-sim-candidates"
+               th:replace="~{fragments/area-simulation :: candidateRows}"></div>
+        </article>
+
+        <aside class="card form-card">
+          <div class="card-head">
+            <h2>Window</h2>
+          </div>
+          <form id="area-sim-window" class="stack">
+            <label>
+              <span>From</span>
+              <input type="datetime-local" name="from" th:value="${from}"
+                     hx-get="/modules/flight-control/run-area-simulation/candidates"
+                     hx-target="#area-sim-candidates" hx-include="#area-sim-window" hx-trigger="change">
+            </label>
+            <label>
+              <span>To</span>
+              <input type="datetime-local" name="to" th:value="${to}"
+                     hx-get="/modules/flight-control/run-area-simulation/candidates"
+                     hx-target="#area-sim-candidates" hx-include="#area-sim-window" hx-trigger="change">
+            </label>
+            <div class="button-row">
+              <button type="button"
+                      hx-get="/modules/flight-control/run-area-simulation/candidates"
+                      hx-target="#area-sim-candidates" hx-include="#area-sim-window">
+                Refresh Candidates
+              </button>
+              <button type="button" class="btn-primary"
+                      hx-post="/modules/flight-control/run-area-simulation"
+                      hx-target="#area-sim-result" hx-include="#area-sim-window">
+                Run
+              </button>
+            </div>
+          </form>
+
+          <div id="area-sim-result" class="result-panel"></div>
+        </aside>
+      </section>
+    </main>
+  </div>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/sortable-table.js"></script>
+</body>
+</html>

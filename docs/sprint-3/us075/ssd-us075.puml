@@ -1,0 +1,24 @@
+@startuml
+skinparam actorStyle awesome
+
+actor "Air Transport Company Collaborator" as Collaborator
+participant ":AISafe System" as System
+
+activate Collaborator
+
+Collaborator -> System : requestAddPilot()
+activate System
+System --> Collaborator : show available aircraft models\n+ request pilot data
+deactivate System
+
+Collaborator -> System : providePilotData(userEmail, aircraftModelIds)
+activate System
+System --> Collaborator : request confirmation
+deactivate System
+
+Collaborator -> System : confirm()
+activate System
+System --> Collaborator : pilot created (status = ACTIVE)
+deactivate System
+
+@enduml

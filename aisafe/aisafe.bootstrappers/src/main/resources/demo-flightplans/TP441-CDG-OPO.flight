@@ -1,0 +1,48 @@
+flight TP441 {
+  type: regular
+
+  route {
+    origin: LFPG
+    destination: LPPR
+  }
+
+  leg 1 {
+    departure { airport: LFPG  datetime: __DEPARTURE__ }
+    arrival   { airport: LPPR  datetime: __ARRIVAL__ }
+    fuel: 12000 kg
+    segments {
+      segment {
+        start: (49.0097, 2.5479)
+        end:   (45.20485, -2.87605)
+        slots {
+          slot { altitude: 1000 m  width: 500 m }
+        }
+        wind { direction: 20  speed: 10.0 m/s }
+      }
+      segment {
+        start: (45.20485, -2.87605)
+        end:   (41.4000, -8.3000)
+        slots {
+          slot { altitude: 7500 m  width: 500 m }
+        }
+        wind { direction: 20  speed: 10.0 m/s }
+      }
+      segment {
+        start: (41.4000, -8.3000)
+        end:   (41.3178, -8.48905)
+        slots {
+          slot { altitude: 7500 m  width: 500 m }
+        }
+        wind { direction: 30  speed: 8.5 m/s }
+      }
+      segment {
+        start: (41.3178, -8.48905)
+        end:   (41.2356, -8.6781)
+        slots {
+          slot { altitude: 1 m  width: 500 m }
+        }
+        wind { direction: 30  speed: 8.5 m/s }
+      }
+    }
+  }
+}

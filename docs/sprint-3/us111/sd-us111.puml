@@ -1,0 +1,112 @@
+@startuml sd-us111
+skinparam actorStyle awesome
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+autonumber
+
+title US111 – Generate a simulation report (realization)
+
+actor "Flight Control Operator" as A
+participant ":GenerateSimulationReportController" as CTRL <<application>>
+participant ":AuthorizationService" as AUTH <<infrastructure>>
+participant ":CustomerCollaboratorRepository" as CC <<persistence>>
+participant ":SimulationResultSource" as SRC <<infrastructure>>
+participant ":SimulationReportAssembler" as SVC <<domain>>
+participant ":FlightRepository" as FR <<persistence>>
+participant ":SafetyViolation" as SV <<domain>>
+participant "run:SimulationRun" as RUN <<domain>>
+participant ":SimulationRunRepository" as RR <<persistence>>
+participant ":SimulationReportWriter" as WR <<infrastructure>>
+
+activate A
+
+A -> CTRL : generate(reportFile, outputPath)
+activate CTRL
+
+CTRL -> AUTH : ensureAuthenticatedUserHasAnyOf(FLIGHT_CONTROL_OPERATOR)
+activate AUTH
+AUTH --> CTRL : fco session
+deactivate AUTH
+note right of CTRL : T9 – authz at the application layer
+
+CTRL -> CC : areaOf(currentUserEmail)
+activate CC
+CC --> CTRL : areaCode
+deactivate CC
+note right of CTRL
+  An FCO may only generate reports for the area
+  they are responsible for (PO 03/06/2026)
+end note
+
+CTRL -> SRC : read(reportFile)
+activate SRC
+note right of SRC
+  Adapter: parses the C simulator's text report
+  into a format-free DTO. How Java and C
+  integrate is an implementation decision
+  (PO 26/05/2026)
+end note
+SRC --> CTRL : parsed:ParsedSimulationReport
+deactivate SRC
+
+CTRL -> SVC : assemble(parsed, areaCode)
+activate SVC
+
+loop each flight in parsed
+  SVC -> FR : ofDesignator(flightDesignator)
+  activate FR
+  FR --> SVC : flight
+  deactivate FR
+end
+
+loop each violation in parsed
+  alt v.kind is an altitude ceiling/floor bust
+    SVC -> SV ** : SafetyViolation.altitude(step, ts, kind,\ninvolvedFlight, metresPastBound)
+  else loss of separation
+    SVC -> SV ** : SafetyViolation.separation(step, ts,\nflightA, flightB, hDist, vDist)
+  end
+  activate SV
+  SV --> SVC : violation
+  deactivate SV
+end
+note right of SVC
+  US111.3: the report's violation kind selects the
+  factory — a loss of separation involves two flights,
+  an altitude ceiling/floor bust exactly one. Involved
+  flights are resolved by identity (loop above).
+end note
+
+SVC -> RUN ** : new SimulationRun(runTimestamp, areaCode,\nstatuses, violations, validationOutcome)
+activate RUN
+note right of RUN
+  Information Expert: invariants enforced in the
+  constructor (Preconditions / Invariants).
+  ValidationOutcome wraps the report's verdict;
+  the run is stamped with the FCO's areaCode.
+end note
+RUN --> SVC : run
+deactivate RUN
+
+SVC --> CTRL : run
+deactivate SVC
+
+CTRL -> RR : save(run)
+activate RR
+note right of RR : report is persisted, not transient (PO 26/05/2026)
+RR --> CTRL : run
+deactivate RR
+
+CTRL -> WR : write(run, outputPath)
+activate WR
+note right of WR
+  Plain text file is sufficient (PO 03/06/2026);
+  single output format, no Strategy.
+end note
+WR --> CTRL : reportFilePath
+deactivate WR
+
+CTRL --> A : summary (flights, violations by kind, PASS|FAIL, path)
+
+deactivate A
+
+@enduml

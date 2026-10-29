@@ -1,0 +1,95 @@
+@startuml us043_domain_model_excerpt
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+left to right direction
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>> #95A5A6
+    FontColor<<external>> #1A1A1A
+}
+
+' ============================================
+' AGGREGATE: WeatherData
+' ============================================
+package "WeatherData Aggregate" {
+    class WeatherData <<aggregate root>> {
+        + temperature : Double
+        + pressure : Double
+        + visibility : Double
+    }
+
+    class WeatherDataId <<value object>>
+
+    class TimePeriod <<value object>> {
+        + startTime : LocalDateTime
+        + endTime : LocalDateTime
+    }
+
+    class WeatherWindSpeed <<value object>> {
+        + value : double
+    }
+
+    class WeatherWindDirection <<value object>> {
+        + value : double
+    }
+
+    class DataSource <<value object>> {
+        + value : String
+    }
+
+    class WeatherZone <<value object>> {
+        + southwest : Coordinates
+        + northeast : Coordinates
+        + altitudeBand : AltitudeBand
+    }
+
+    class AltitudeBand <<value object>> {
+        + lowerFeet : double
+        + upperFeet : double
+    }
+
+    WeatherData *-- WeatherDataId
+    WeatherData *-- TimePeriod
+    WeatherData *-- WeatherWindSpeed
+    WeatherData *-- WeatherWindDirection
+    WeatherData *-- DataSource
+    WeatherData *-- WeatherZone
+    WeatherZone *-- AltitudeBand
+}
+
+' ============================================
+' EXTERNAL AGGREGATES / VALUE OBJECTS
+' ============================================
+package "AirControlArea Aggregate" #EEEEEE {
+    class AirControlArea <<aggregate root>> <<external>>
+
+    class AreaCode <<value object>> <<external>>
+
+    AirControlArea *-- AreaCode
+}
+
+' Coordinates is defined in the AirControlArea package in the code
+' but is reused by WeatherZone — no coupling to AirControlArea in this US
+package "Shared Value Objects" #EEEEEE {
+    class Coordinates <<value object>> <<external>> {
+        + latitude : double
+        + longitude : double
+    }
+}
+
+' ============================================
+' CROSS-AGGREGATE RELATIONSHIPS
+' ============================================
+WeatherData --> AreaCode : areaCode\n(embedded reference)
+WeatherZone *-- "2" Coordinates : southwest / northeast
+
+@enduml

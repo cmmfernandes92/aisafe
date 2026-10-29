@@ -1,0 +1,23 @@
+<th:block th:fragment="engine-options">
+  <option value="">Select engines (hold Ctrl/Cmd for multi)</option>
+  <option th:each="em : ${engineModels}"
+          th:value="${em.id()}"
+          th:text="|${em.name()} — ${em.makerName()}|">CFM56 — CFM International</option>
+</th:block>
+
+<tbody th:fragment="rows(aircraftModels)" id="aircraft-models-tbody">
+  <tr th:each="am : ${aircraftModels}">
+    <td th:text="${am.name()}">A320</td>
+    <td th:text="${am.makerName()}">Airbus</td>
+    <td class="mono" th:text="${am.type()}">PASSENGER</td>
+    <td class="mono" th:text="${am.motorizationType()}">TURBOFAN</td>
+    <td class="mono" th:text="${#numbers.formatDecimal(am.emptyWeight(), 1, 0)}">42600</td>
+    <td class="mono" th:text="${#numbers.formatDecimal(am.mtow(), 1, 0)}">78000</td>
+    <td class="mono" th:text="${#numbers.formatDecimal(am.cruiseSpeed(), 1, 0)}">828</td>
+    <td class="mono" th:text="${#numbers.formatDecimal(am.maximumRange(), 1, 0)}">6100</td>
+    <td th:text="${am.certifiedEngines()}">CFM56</td>
+  </tr>
+  <tr th:if="${#lists.isEmpty(aircraftModels)}">
+    <td colspan="9" class="empty">No aircraft models registered.</td>
+  </tr>
+</tbody>

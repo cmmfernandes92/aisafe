@@ -1,0 +1,40 @@
+// FR401 — Porto (OPO/LPPR) -> Lisbon (LIS/LPPT), Ryanair, Airbus A320neo
+// Endpoints use the exact seeded airport coordinates.
+// Cruise 9000 m (FL295): realistic short-haul, well under the A320neo
+// service ceiling of 12131 m. Fuel 3300 kg > trip burn + destination-ACA
+// reserve, so the US085 fuel-sufficiency test passes.
+// Two segments => per-segment weather (US082) can be attached independently.
+flight FR401 {
+  type: regular
+
+  route {
+    origin: LPPR
+    destination: LPPT
+  }
+
+  leg 1 {
+    departure { airport: LPPR  datetime: 2026-06-18T09:00 }
+    arrival   { airport: LPPT  datetime: 2026-06-18T09:50 }
+    fuel: 3300 kg
+    segments {
+      // Climb-out + first cruise: Porto -> mid-route (~Coimbra latitude)
+      segment {
+        start: (41.2356, -8.6781)
+        end:   (40.0100, -8.9000)
+        slots {
+          slot { altitude: 9000 m  width: 500 m }
+        }
+        wind { direction: 350  speed: 8.0 m/s }
+      }
+      // Second cruise + descent: mid-route -> Lisbon
+      segment {
+        start: (40.0100, -8.9000)
+        end:   (38.7742, -9.1342)
+        slots {
+          slot { altitude: 9000 m  width: 500 m }
+        }
+        wind { direction: 340  speed: 6.5 m/s }
+      }
+    }
+  }
+}

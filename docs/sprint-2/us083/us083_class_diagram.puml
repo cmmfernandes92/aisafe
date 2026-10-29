@@ -1,0 +1,199 @@
+@startuml us083_class_diagram
+title US083 - Flight DSL Class Diagram
+
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam packageStyle rectangle
+hide empty members
+left to right direction
+
+' ============================================================
+' ANTLR runtime (external, on classpath via antlr4-runtime)
+' ============================================================
+package "org.antlr.v4.runtime" <<external>> #EEEEEE {
+    abstract class BaseErrorListener
+    abstract class Lexer
+    abstract class Parser
+}
+
+' ============================================================
+' Generated from FlightDSL.g4 by antlr4-maven-plugin
+' (excluded from coverage)
+' ============================================================
+package "eapli.aisafe.flightplanmanagement.dsl.grammar" <<generated>> #FFF8DC {
+    class FlightDSLLexer
+    class FlightDSLParser
+    class "FlightDSLBaseVisitor<T>" as BaseVisitor
+    class FlightDSLBaseListener
+
+    FlightDSLLexer  -up-|> Lexer
+    FlightDSLParser -up-|> Parser
+}
+
+' ============================================================
+' Public API
+' ============================================================
+package "eapli.aisafe.flightplanmanagement.dsl" {
+    interface FlightPlanImporter <<interface>> {
+        +importFrom(InputStream, String) : CompilationResult
+    }
+
+    class FlightDslCompiler {
+        +importFrom(InputStream, String) : CompilationResult
+        +compile(Path) : CompilationResult
+        +main(String[]) : void
+    }
+
+    class CompilationResult <<record>> {
+        +file : Optional<FlightPlanFile>
+        +errors : List<DslError>
+        +ok() : boolean
+    }
+
+    FlightDslCompiler ..|> FlightPlanImporter
+    FlightDslCompiler ..> CompilationResult : produces
+}
+
+' ============================================================
+' Parsing layer — our ANTLR adapters
+' ============================================================
+package "eapli.aisafe.flightplanmanagement.dsl.parsing" {
+    class FlightDomainBuildingVisitor {
+        +visitFlightPlanFile(..) : FlightPlanFile
+        +visitFlight(..) : FlightPlanDTO
+        +visitLeg(..) : FlightLeg
+        +visitSegment(..) : FlightSegment
+        +visitSlot(..) : AltitudeSlot
+        +visitAirportCode(..) : AirportCode
+    }
+    class FlightStatisticsListener {
+        +enterFlight(..) : void
+        +enterLeg(..) : void
+        +enterSegment(..) : void
+        +snapshot() : ParseStats
+    }
+    class CollectingErrorListener {
+        -collector : ErrorCollector
+        -phase : DslError.Phase
+        +syntaxError(..) : void
+    }
+
+    FlightDomainBuildingVisitor -up-|> BaseVisitor
+    FlightStatisticsListener   -up-|> FlightDSLBaseListener
+    CollectingErrorListener    -up-|> BaseErrorListener
+}
+
+' ============================================================
+' Validation layer
+' ============================================================
+package "eapli.aisafe.flightplanmanagement.dsl.validation" {
+    class SemanticValidator {
+        -errors : ErrorCollector
+        +validate(FlightPlanFile) : void
+        -checkUniqueFlightIds(..)
+        -checkFuelPositivity(..)
+        -checkLegSequenceCoherence(..)
+        -checkRouteCoherence(..)
+        -checkSegments(..)
+        -checkWind(..)
+        -checkCoordinates(..)
+    }
+    class ErrorCollector {
+        -errors : List<DslError>
+        +add(DslError) : void
+        +all() : List<DslError>
+        +hasErrors() : boolean
+    }
+    class DslError <<record>> {
+        +phase : Phase
+        +code : String
+        +message : String
+        +line : int
+        +column : int
+    }
+    enum Phase <<enum>> {
+        LEXICAL
+        SYNTACTIC
+        SEMANTIC
+    }
+
+    SemanticValidator --> ErrorCollector
+    ErrorCollector    o-- "*" DslError
+    DslError          *-- Phase
+}
+
+' ============================================================
+' Domain (DTO-shaped, ANTLR-free, mirrors team vocabulary)
+' ============================================================
+package "eapli.aisafe.flightplanmanagement.dsl.dto" {
+    class FlightPlanFile     <<record>>
+    class FlightPlanDTO      <<record>>
+    class FlightDesignator   <<record>>
+    class Route              <<record>>
+    class FlightLeg          <<record>>
+    class DepartureInfo      <<record>>
+    class ArrivalInfo        <<record>>
+    class FuelLoad           <<record>>
+    class FlightSegment      <<record>>
+    class Waypoint           <<record>>
+    class Coordinates        <<record>>
+    class AltitudeSlot       <<record>>
+    class Length             <<record>>
+    class WindDirection      <<record>>
+    class WindSpeed          <<record>>
+    class SourceLocation     <<record>>
+
+    interface AirportCode <<sealed>>
+    class AirportIATACode <<record>>
+    class AirportICAOCode <<record>>
+
+    enum FlightType {
+        REGULAR
+        CHARTER
+    }
+    enum FuelUnit {
+        KG
+        L
+    }
+
+    AirportIATACode ..|> AirportCode
+    AirportICAOCode ..|> AirportCode
+
+    FlightPlanFile  *-- "1..*" FlightPlanDTO
+    FlightPlanDTO   *-- FlightDesignator
+    FlightPlanDTO   *-- FlightType
+    FlightPlanDTO   *-- Route
+    FlightPlanDTO   *-- "1..*" FlightLeg
+    Route           o-- "2"    AirportCode
+    FlightLeg       *-- DepartureInfo
+    FlightLeg       *-- ArrivalInfo
+    FlightLeg       *-- FuelLoad
+    FlightLeg       *-- "1..*" FlightSegment
+    DepartureInfo   o-- AirportCode
+    ArrivalInfo     o-- AirportCode
+    FuelLoad        *-- FuelUnit
+    FlightSegment   *-- "2" Waypoint
+    FlightSegment   *-- "1..*" AltitudeSlot
+    FlightSegment   *-- WindDirection
+    FlightSegment   *-- WindSpeed
+    Waypoint        *-- Coordinates
+    AltitudeSlot    *-- "2" Length
+}
+
+' ============================================================
+' Cross-package wiring (the compilation pipeline)
+' ============================================================
+FlightDslCompiler ..> FlightDSLLexer               : creates
+FlightDslCompiler ..> FlightDSLParser              : creates
+FlightDslCompiler ..> FlightDomainBuildingVisitor  : drives
+FlightDslCompiler ..> FlightStatisticsListener     : drives (diagnostic)
+FlightDslCompiler ..> CollectingErrorListener      : installs on lexer & parser
+FlightDslCompiler ..> SemanticValidator            : invokes
+FlightDslCompiler *-- ErrorCollector               : owns
+
+FlightDomainBuildingVisitor ..> FlightPlanFile     : builds
+SemanticValidator           ..> FlightPlanFile     : reads
+CompilationResult           o-- FlightPlanFile
+CompilationResult           o-- "*" DslError
+
+@enduml

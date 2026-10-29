@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AISafe - Simulate Area Flights · Airspace 3D</title>
+
+  <!-- AISafe shell chrome (topbar + sidebar) -->
+  <link rel="stylesheet" href="/css/app.css?v=20260610-topbar-zfix" />
+
+  <!-- ===== Airspace-simulator stack (verbatim from the prototype) ===== -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@500;600;700&family=Poppins:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- MapLibre GL JS (classic render(gl,matrix) custom-layer signature) -->
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" />
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: { 900:'#070B14', 800:'#0B1120', 700:'#101830', 600:'#131C36', 500:'#1E293B', 400:'#27324D', 300:'#3A4664' },
+            cyan2:'#00E5FF', purple2:'#7B61FF', pink2:'#FF4D9D', amber2:'#FFB547', green2:'#3EE6A8',
+          },
+          fontFamily: {
+            sans:['Inter','system-ui','sans-serif'],
+            display:['Orbitron','Inter','sans-serif'],
+            mono:['JetBrains Mono','ui-monospace','monospace'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    /* Full-bleed sim page (no document scroll). */
+    html, body { overflow: hidden; height: 100%; }
+    .sim-layout { height: calc(100vh - 64px); }
+    .sim-main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; padding: 0; }
+
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .accent-gradient { background: linear-gradient(90deg, #00E5FF 0%, #7B61FF 55%, #FF4D9D 100%); }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #27324D; border-radius: 3px; }
+
+    .divider { background-image: linear-gradient(90deg, rgba(58,70,100,.5) 50%, transparent 50%); background-size: 6px 1px; background-repeat: repeat-x; background-position: center; height: 1px; }
+
+    /* MapLibre dark chrome */
+    /* override app.css's global #map { height: 520px } so the sim map fills the main area */
+    #map { position: absolute; inset: 0; height: 100%; width: 100%; background: #070B14; }
+    .maplibregl-ctrl-attrib { background: rgba(7,11,20,.72) !important; color: #6B7896 !important; font-size: 10px; }
+    .maplibregl-ctrl-attrib a { color: #00E5FF !important; }
+    .maplibregl-ctrl-group { background: #131C36 !important; border: 1px solid #27324D !important; }
+    .maplibregl-ctrl-group button { background: #131C36 !important; min-height: 0; }
+    .maplibregl-ctrl-group button + button { border-top: 1px solid #27324D !important; }
+    .maplibregl-ctrl button .maplibregl-ctrl-icon { filter: invert(0.85); }
+    .maplibregl-ctrl-group button:hover { background: #1E293B !important; }
+
+    /* Sim panels */
+    .sim-panel {
+      position: absolute;
+      background: linear-gradient(180deg, rgba(11,17,32,.86) 0%, rgba(7,11,20,.86) 100%);
+      border: 1px solid rgba(58,70,100,.5); border-radius: 8px;
+      box-shadow: 0 18px 50px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.03);
+      backdrop-filter: blur(14px); color: #E5ECF7;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px; z-index: 600;
+    }
+    .sim-panel h3 {
+      margin: 0; padding: 10px 14px 8px; font-size: 10px; font-weight: 600;
+      letter-spacing: .2em; text-transform: uppercase; color: #94A3B8;
+      border-bottom: 1px solid rgba(58,70,100,.4); display: flex; align-items: center; gap: 8px;
+    }
+    .sim-panel h3 .dot { width: 6px; height: 6px; border-radius: 50%; background: #00E5FF; box-shadow: 0 0 8px #00E5FF; }
+    .sim-panel .body { padding: 10px 14px 12px; }
+
+    .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .kpi { background: rgba(7,11,20,.6); border: 1px solid rgba(58,70,100,.4); border-radius: 6px; padding: 8px 10px; }
+    .kpi .label { font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: #64748B; }
+    .kpi .val { font-size: 20px; font-weight: 600; line-height: 1.1; margin-top: 2px; font-family: 'Orbitron', monospace; color: #E5ECF7; }
+    .kpi.viol .val { color: #FFB547; }
+    .kpi.viol.alert .val { color: #FF4D9D; }
+
+    .status-row { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; padding: 6px 10px; border: 1px solid rgba(58,70,100,.4); border-radius: 6px; background: rgba(7,11,20,.4); }
+    .status-row .lbl { color: #64748B; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
+    .status-row .val { font-size: 11px; }
+    .status-pill { padding: 2px 8px; border-radius: 99px; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+    .status-pill.running { background: rgba(62,230,168,.12); color: #3EE6A8; border: 1px solid rgba(62,230,168,.3); }
+    .status-pill.paused  { background: rgba(255,181,71,.10); color: #FFB547; border: 1px solid rgba(255,181,71,.3); }
+    .status-pill.ended   { background: rgba(255,77,157,.10); color: #FF4D9D; border: 1px solid rgba(255,77,157,.3); }
+    .status-pill.done    { background: rgba(0,229,255,.10); color: #00E5FF; border: 1px solid rgba(0,229,255,.3); }
+    .status-pill.idle    { background: rgba(100,116,139,.10); color: #94A3B8; border: 1px solid rgba(100,116,139,.3); }
+
+    .slider-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+    .slider-row label { flex: 0 0 76px; font-size: 10px; color: #64748B; letter-spacing: .1em; text-transform: uppercase; }
+    .slider-row input[type=range] { flex: 1; -webkit-appearance: none; appearance: none; height: 3px; background: #27324D; border-radius: 2px; outline: none; }
+    .slider-row input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #00E5FF; cursor: pointer; border: 2px solid #070B14; }
+    .slider-row input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #00E5FF; cursor: pointer; border: 2px solid #070B14; }
+    .slider-row .v { font-size: 11px; width: 54px; text-align: right; color: #E5ECF7; }
+
+    .chip { padding: 4px 9px; border: 1px solid rgba(58,70,100,.6); background: rgba(255,255,255,.02); color: #94A3B8; border-radius: 99px; cursor: pointer; font-size: 10px; letter-spacing: .05em; transition: all .12s; font-family: 'JetBrains Mono', monospace; }
+    .chip.on { background: rgba(0,229,255,.1); border-color: #00E5FF; color: #00E5FF; }
+    .chip:hover:not(.on) { color: #E5ECF7; border-color: #3A4664; }
+
+    /* Segmented basemap control */
+    .seg { display: flex; border: 1px solid rgba(58,70,100,.6); border-radius: 6px; overflow: hidden; }
+    .seg-btn { flex: 1; padding: 6px 4px; min-height: 0; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: #94A3B8; background: transparent; cursor: pointer; border: none; border-right: 1px solid rgba(58,70,100,.4); }
+    .seg-btn:last-child { border-right: none; }
+    .seg-btn.on { background: rgba(0,229,255,.12); color: #00E5FF; }
+    .seg-btn:hover:not(.on) { background: rgba(255,255,255,.04); color: #E5ECF7; }
+
+    /* Scenario preset cards */
+    .preset-card { padding: 8px 10px; border: 1px solid rgba(58,70,100,.5); border-radius: 6px; background: rgba(7,11,20,.4); cursor: pointer; transition: all .12s; font-family: 'JetBrains Mono', monospace; text-align: left; }
+    .preset-card:hover { border-color: #7B61FF; background: rgba(123,97,255,.06); }
+    .preset-card.active { border-color: #00E5FF; background: rgba(0,229,255,.08); }
+    .preset-card .nm { font-size: 11px; color: #E5ECF7; font-weight: 600; }
+    .preset-card .sub { font-size: 9.5px; color: #64748B; margin-top: 2px; letter-spacing: .08em; }
+    .preset-card .meta { display: flex; gap: 8px; margin-top: 4px; font-size: 9px; color: #94A3B8; }
+    .preset-card .meta b { color: #FFB547; font-weight: 500; }
+
+    /* Flight roster cards */
+    .flight-card { padding: 8px; border: 1px solid rgba(58,70,100,.4); border-radius: 6px; margin-bottom: 6px; background: rgba(7,11,20,.45); }
+    .flight-card .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .flight-card .id-line { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+    .flight-card .swatch { width: 9px; height: 9px; border-radius: 2px; box-shadow: 0 0 6px currentColor; }
+    .flight-card .badge { font-size: 9px; letter-spacing: .1em; text-transform: uppercase; padding: 1px 5px; border-radius: 3px; border: 1px solid rgba(58,70,100,.6); color: #64748B; margin-left: 4px; }
+    .flight-card .badge.viol  { color: #FF4D9D; border-color: rgba(255,77,157,.4); background: rgba(255,77,157,.08); }
+    .flight-card .badge.alarm { color: #FFB547; border-color: rgba(255,181,71,.4); background: rgba(255,181,71,.06); }
+    .flight-card .badge.ok    { color: #3EE6A8; border-color: rgba(62,230,168,.3); background: rgba(62,230,168,.06); }
+    .icon-btn { width: 20px; height: 20px; min-height: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: 1px solid rgba(58,70,100,.6); border-radius: 4px; color: #64748B; cursor: pointer; font-size: 11px; line-height: 1; }
+    .icon-btn:hover { color: #FF4D9D; border-color: #FF4D9D; }
+    .field-grid { display: grid; grid-template-columns: auto 1fr 1fr 1fr; gap: 4px 6px; align-items: center; }
+    .field-grid .lbl { font-size: 9px; color: #64748B; letter-spacing: .08em; text-transform: uppercase; text-align: right; padding-right: 4px; }
+    .field-grid input { background: rgba(7,11,20,.7); border: 1px solid rgba(58,70,100,.4); color: #E5ECF7; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; padding: 3px 5px; border-radius: 3px; width: 100%; height: auto; outline: none; }
+    .field-grid input:focus { border-color: #00E5FF; box-shadow: none; }
+
+    .add-flight { width: 100%; padding: 8px; min-height: 0; border: 1px dashed rgba(58,70,100,.6); background: transparent; color: #64748B; font-family: 'JetBrains Mono', monospace; font-size: 11px; border-radius: 6px; cursor: pointer; margin-top: 4px; }
+    .add-flight:hover { color: #00E5FF; border-color: #00E5FF; }
+
+    #notice { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); padding: 8px 18px; background: rgba(0,229,255,.12); border: 1px solid rgba(0,229,255,.4); color: #00E5FF; font-family: 'JetBrains Mono', monospace; font-size: 11px; border-radius: 6px; letter-spacing: .06em; opacity: 0; pointer-events: none; transition: opacity .2s; text-transform: uppercase; z-index: 700; }
+    #notice.show { opacity: 1; }
+    #notice.warn { background: rgba(255,77,157,.15); border-color: #FF4D9D; color: #FF4D9D; }
+
+    /* Sector picker dropdown */
+    .area-menu { position: absolute; top: calc(100% + 6px); left: 0; min-width: 380px; max-height: 320px; overflow-y: auto; background: linear-gradient(180deg, rgba(11,17,32,.96) 0%, rgba(7,11,20,.96) 100%); border: 1px solid rgba(58,70,100,.6); border-radius: 8px; box-shadow: 0 18px 50px rgba(0,0,0,.6); z-index: 1200; padding: 6px; }
+    .area-menu .row { display: grid; grid-template-columns: 60px 1fr 90px; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 5px; cursor: pointer; }
+    .area-menu .row:hover { background: rgba(0,229,255,.08); }
+    .area-menu .row .code { font-family: 'JetBrains Mono', monospace; color: #00E5FF; font-size: 12px; font-weight: 600; }
+    .area-menu .row .name { font-size: 12px; color: #E5ECF7; }
+    .area-menu .row .span { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: #64748B; text-align: right; }
+
+    /* View toggle */
+    .vt { display: inline-flex; border: 1px solid rgba(58,70,100,.5); border-radius: 6px; overflow: hidden; }
+    .vt a { padding: 6px 10px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #94A3B8; }
+    .vt a.on { background: rgba(0,229,255,.12); color: #00E5FF; }
+    .vt a:hover:not(.on) { background: rgba(255,255,255,.04); color: #E5ECF7; }
+
+    #help-bar { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: #64748B; letter-spacing: .1em; text-transform: uppercase; display: flex; gap: 16px; background: rgba(7,11,20,.65); padding: 6px 16px; border-radius: 99px; border: 1px solid rgba(58,70,100,.4); pointer-events: none; z-index: 500; }
+    #help-bar b { color: #94A3B8; font-weight: 600; }
+
+    /* Keep prototype control-strip buttons at their native (Tailwind) height. */
+    .sim-main button { min-height: 0; }
+  </style>
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout sim-layout">
+    <div th:replace="~{layout :: sidebar('simulate-area-flights', ${currentModule}, ${navItems})}"></div>
+
+    <!-- MAIN — airspace simulator (verbatim from the prototype) -->
+    <main class="sim-main">
+
+      <!-- Control strip -->
+      <section class="h-[60px] shrink-0 border-b border-ink-400/30 bg-ink-800/50 flex items-center px-5 gap-3 relative" style="z-index: 1000">
+        <div class="relative shrink-0" id="area-picker-wrap">
+          <button id="area-picker-btn" class="h-9 px-3 pr-2 rounded border border-cyan2/40 bg-cyan2/5 hover:bg-cyan2/10 flex items-center gap-2.5 min-w-[230px]">
+            <span class="mono text-[9px] uppercase tracking-[0.18em] text-slate-500">Run</span>
+            <span id="area-picker-code" class="mono text-[12px] text-cyan2 font-semibold">—</span>
+            <span id="area-picker-name" class="text-[12px] text-slate-300 truncate">Select a simulation run</span>
+            <span class="ml-auto text-slate-500 text-[10px]">▾</span>
+          </button>
+          <div id="area-menu" class="area-menu hidden"></div>
+        </div>
+
+        <div class="h-7 w-px bg-ink-400/40 shrink-0"></div>
+
+        <div class="flex items-center gap-2 shrink-0 min-w-0">
+          <span class="mono text-[9px] uppercase tracking-[0.18em] text-slate-500">Scenario</span>
+          <span id="active-preset" class="mono text-[11px] text-slate-400 truncate max-w-[180px]">none loaded</span>
+        </div>
+
+        <div class="ml-auto flex items-center gap-2 shrink-0">
+          <div class="vt">
+            <a class="on">Map</a>
+          </div>
+          <div class="h-7 w-px bg-ink-400/40"></div>
+          <button id="btn-play" class="h-9 px-4 rounded accent-gradient text-ink-900 font-semibold text-[11px] mono uppercase tracking-[0.15em] hover:brightness-110">▶ Run Sim</button>
+          <button id="btn-step" class="h-9 px-3 rounded border border-ink-400/60 bg-ink-700/40 hover:bg-ink-600/60 mono text-[11px] uppercase tracking-[0.1em] text-slate-200">⏭ Step</button>
+          <button id="btn-reset" class="h-9 px-3 rounded border border-pink2/30 bg-ink-700/40 hover:bg-pink2/10 mono text-[11px] uppercase tracking-[0.1em] text-pink2">⟲ Reset</button>
+        </div>
+      </section>
+
+      <!-- Map -->
+      <section class="flex-1 relative min-h-0" id="sim-shell">
+        <div id="map"></div>
+        <div id="notice"></div>
+
+        <!-- Telemetry -->
+        <div class="sim-panel" style="top:16px; left:16px; width:280px;">
+          <h3><span class="dot"></span>Telemetry</h3>
+          <div class="body">
+            <div class="kpi-grid">
+              <div class="kpi"><div class="label">Step</div><div class="val" id="kpi-step">0 / 0</div></div>
+              <div class="kpi viol" id="kpi-viol-box"><div class="label">Violations</div><div class="val" id="kpi-viol">0 / 0</div></div>
+            </div>
+            <div class="status-row"><span class="lbl">Status</span><span class="status-pill idle" id="kpi-status">Idle</span></div>
+            <div class="status-row"><span class="lbl">Sector</span><span class="val" id="kpi-sector" style="color:#00E5FF">—</span></div>
+            <div class="status-row"><span class="lbl">Span</span><span class="val mono" id="kpi-span" style="color:#94A3B8">— × —</span></div>
+          </div>
+        </div>
+
+        <!-- Playback + Display -->
+        <div class="sim-panel" style="bottom:16px; left:16px; width:288px;">
+          <h3><span class="dot" style="background:#7B61FF;box-shadow:0 0 8px #7B61FF"></span>Playback &amp; View</h3>
+          <div class="body">
+            <div class="text-[9px] mono uppercase tracking-[0.16em] text-slate-500 mb-1.5">Basemap</div>
+            <div class="seg" id="basemap-seg">
+              <button class="seg-btn" data-base="sat">Satellite</button>
+              <button class="seg-btn on" data-base="dark">Dark</button>
+              <button class="seg-btn" data-base="streets">Streets</button>
+            </div>
+            <div class="slider-row"><label>Steps/sec</label><input type="range" id="rate" min="0.5" max="8" step="0.1" value="2"/><span class="v" id="rate-v">2.0</span></div>
+            <div class="slider-row"><label>Alt&nbsp;exag</label><input type="range" id="exag" min="1" max="30" step="1" value="1"/><span class="v" id="exag-v">1×</span></div>
+            <div class="slider-row"><label>Trail</label><input type="range" id="trail" min="1" max="20" step="1" value="10"/><span class="v" id="trail-v">10</span></div>
+            <div class="divider my-3"></div>
+            <div class="flex flex-wrap gap-1.5">
+              <span class="chip on" data-toggle="buildings">3D Buildings</span>
+              <span class="chip" data-toggle="terrain">Terrain</span>
+              <span class="chip on" data-toggle="zones">Safety Zones</span>
+              <span class="chip on" data-toggle="trails">Trails</span>
+              <span class="chip on" data-toggle="links">Conflict Links</span>
+              <span class="chip on" data-toggle="drops">Drop Lines</span>
+              <span class="chip on" data-toggle="labels">Labels</span>
+              <span class="chip on" data-toggle="sector">Sector</span>
+              <span class="chip" data-toggle="log">Event Log</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Roster -->
+        <div class="sim-panel flex flex-col" style="top:16px; right:16px; width:340px; max-height: calc(100% - 32px);">
+          <h3><span class="dot"></span>Flights &amp; Parameters</h3>
+          <div class="overflow-y-auto" style="flex:1;">
+            <div class="px-3 py-3 border-b border-ink-400/30">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-[9.5px] mono uppercase tracking-[0.18em] text-slate-400">Run Details</span>
+                <span class="text-[9px] mono text-slate-600">report.txt</span>
+              </div>
+              <div id="param-readout">
+                <div class="text-[11px] text-slate-500 text-center py-2 italic">Pick a run to load its parameters</div>
+              </div>
+            </div>
+            <div class="px-3 py-3">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-[9.5px] mono uppercase tracking-[0.18em] text-slate-400">Flights <span id="fl-count" class="text-slate-600 ml-1">0</span></span>
+                <span class="text-[9px] mono text-slate-600">scenario.json</span>
+              </div>
+              <div id="flights"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Log -->
+        <div class="sim-panel" id="log-panel" style="bottom:16px; right:16px; width:340px; max-height: 34%; display: none; flex-direction: column;">
+          <h3><span class="dot" style="background:#FF4D9D;box-shadow:0 0 8px #FF4D9D"></span>Violation Log</h3>
+          <div class="overflow-y-auto px-3 py-2 text-[10.5px]" id="log-body" style="font-family:'JetBrains Mono',monospace">
+            <div class="text-slate-500 italic text-center py-3">No violations yet.</div>
+          </div>
+        </div>
+
+        <div id="help-bar">
+          <span><b>Drag</b> pan</span>
+          <span><b>Right-drag</b> rotate / tilt</span>
+          <span><b>Wheel</b> zoom</span>
+          <span><b>Space</b> play</span>
+          <span><b>→</b> step</span>
+          <span><b>R</b> reset</span>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- AISafe shell sidebar collapse (shared) -->
+  <script src="/js/sidebar.js"></script>
+
+  <!-- Simulator engine (verbatim from the prototype) -->
+  <script type="importmap">
+  { "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  } }
+  </script>
+  <script type="module" src="/js/simulator-map.js?v=20260614-glowtrail"></script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+flight TP1692 {
+  type: regular
+
+  route {
+    origin: LPMA
+    destination: LPPT
+  }
+
+  leg 1 {
+    departure { airport: LPMA  datetime: __DEPARTURE__ }
+    arrival   { airport: LPPT  datetime: __ARRIVAL__ }
+    fuel: 11000 kg
+    segments {
+      segment {
+        start: (32.6979, -16.7745)
+        end:   (34.84895, -13.88725)
+        slots {
+          slot { altitude: 1000 m  width: 500 m }
+        }
+        wind { direction: 40  speed: 8.0 m/s }
+      }
+      segment {
+        start: (34.84895, -13.88725)
+        end:   (37.0000, -11.0000)
+        slots {
+          slot { altitude: 6500 m  width: 500 m }
+        }
+        wind { direction: 40  speed: 8.0 m/s }
+      }
+      segment {
+        start: (37.0000, -11.0000)
+        end:   (37.8871, -10.0671)
+        slots {
+          slot { altitude: 6500 m  width: 500 m }
+        }
+        wind { direction: 50  speed: 7.0 m/s }
+      }
+      segment {
+        start: (37.8871, -10.0671)
+        end:   (38.7742, -9.1342)
+        slots {
+          slot { altitude: 1 m  width: 500 m }
+        }
+        wind { direction: 50  speed: 7.0 m/s }
+      }
+    }
+  }
+}

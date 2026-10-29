@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AISafe - Collaborators</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260612-backoffice-collaborators">
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar('collaborators', ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Reference Data</p>
+          <h1>Collaborators</h1>
+          <p class="page-copy">Link existing AISafe users to air transport companies or air control areas.</p>
+        </div>
+      </header>
+
+      <section class="areas-grid">
+        <article th:replace="~{fragments/table-card :: card(
+            'Registered Collaborators',
+            '/collaborators/table',
+            '#collaborators-tbody',
+            'Refresh collaborators',
+            ~{::#collaborators-head},
+            ~{fragments/collaborators :: rows(${snapshot.collaborators()})})}">
+          <thead id="collaborators-head">
+          <tr>
+            <th>Email</th>
+            <th>Type</th>
+            <th>Position</th>
+            <th>Assignment</th>
+            <th>Contact Email</th>
+            <th>Phone</th>
+            <th>Status</th>
+          </tr>
+          </thead>
+        </article>
+
+        <aside class="stack">
+          <section class="card form-card">
+            <div class="card-head">
+              <h2>Create Company Collaborator</h2>
+              <span>POST /collaborators/company</span>
+            </div>
+            <div id="company-form-result"></div>
+            <form hx-post="/collaborators/company" hx-target="#company-form-result" hx-swap="innerHTML" class="stack">
+              <label>
+                <span>User</span>
+                <select name="email" required>
+                  <option value="">Select ATCC user</option>
+                  <option th:each="user : ${snapshot.companyUsers()}"
+                          th:value="${user.email()}"
+                          th:text="|${user.email()} - ${user.phoneNumber()}|">atcc@aisafe.test</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Position</span>
+                <input name="position" required maxlength="64" placeholder="Operations Coordinator">
+              </label>
+
+              <label>
+                <span>Company</span>
+                <select name="companyCode" required>
+                  <option value="">Select company</option>
+                  <option th:each="company : ${snapshot.companies()}"
+                          th:value="${company.iataCode()}"
+                          th:text="|${company.iataCode()} - ${company.companyName()}|">TP - TAP Air Portugal</option>
+                </select>
+              </label>
+
+              <button type="submit">Create Company Collaborator</button>
+            </form>
+          </section>
+
+          <section class="card form-card">
+            <div class="card-head">
+              <h2>Create Area Collaborator</h2>
+              <span>POST /collaborators/area</span>
+            </div>
+            <div id="area-form-result"></div>
+            <form hx-post="/collaborators/area" hx-target="#area-form-result" hx-swap="innerHTML" class="stack">
+              <label>
+                <span>User</span>
+                <select name="email" required>
+                  <option value="">Select FCO user</option>
+                  <option th:each="user : ${snapshot.areaUsers()}"
+                          th:value="${user.email()}"
+                          th:text="|${user.email()} - ${user.phoneNumber()}|">fco@aisafe.test</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Position</span>
+                <input name="position" required maxlength="64" placeholder="Flight Control Operator">
+              </label>
+
+              <label>
+                <span>Air Control Area</span>
+                <select name="areaCode" required>
+                  <option value="">Select area</option>
+                  <option th:each="area : ${snapshot.areas()}"
+                          th:value="${area.code()}"
+                          th:text="|${area.code()} - ${area.name()}|">LPPC - Lisboa FIR</option>
+                </select>
+              </label>
+
+              <button type="submit">Create Area Collaborator</button>
+            </form>
+          </section>
+        </aside>
+      </section>
+    </main>
+  </div>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/sortable-table.js"></script>
+</body>
+</html>

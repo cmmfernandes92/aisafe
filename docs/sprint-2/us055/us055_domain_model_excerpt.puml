@@ -1,0 +1,71 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>> #95A5A6
+    FontColor<<external>> #1A1A1A
+}
+
+hide empty members
+
+package "AircraftModel Aggregate" {
+    class AircraftModel <<aggregate root>> {
+        modelID
+        modelName
+        emptyWeight
+        mtow
+        mzfw
+        maxFuelCapacity
+        serviceCeiling
+        cruiseSpeed
+        wingArea
+        dragCoefficient
+        liftCoefficient
+        maximumRange
+    }
+    enum Type <<enum>> {
+        PASSENGER
+        CARGO
+        MIXED
+    }
+    enum MotorizationType <<enum>> {
+        TURBOPROP
+        TURBOFAN
+        TURBOJET
+        RAMJET
+        ELECTRIC_PROPELLER
+    }
+
+    AircraftModel *-- Type
+    AircraftModel *-- MotorizationType
+}
+
+' External aggregates referenced by AircraftModel
+package "Maker Aggregate" {
+    class Maker <<aggregate root>> <<external>>
+}
+
+package "EngineModel Aggregate" {
+    class EngineModel <<aggregate root>> <<external>>
+}
+
+AircraftModel --> Maker : manufactured by
+AircraftModel --> "1..*" EngineModel : certified engines
+
+note right of AircraftModel
+  Invariants:
+  - modelName + manufacturer must be unique
+  - At least one certified engine model
+  - Engine motorization type must be compatible
+    with aircraft motorization type
+end note
+
+@enduml

@@ -1,0 +1,48 @@
+// FR301 — Porto (OPO/LPPR) -> Madrid (MAD/LEMD), Ryanair, Airbus A320neo
+// Endpoints use the exact seeded airport coordinates (LPPR) and the
+// Madrid-Barajas coordinates registered in the airport use case (LEMD).
+// Cruise 9000 m (FL295): realistic short-haul, well under the A320neo
+// service ceiling of 12131 m. Fuel 3800 kg > trip burn + destination-ACA
+// reserve, so the US085 fuel-sufficiency test passes.
+//
+// The two segments are split EXACTLY on the LPPC/LECM FIR boundary (lon -7.999,
+// the western edge of the Madrid FIR / LECM box):
+//   - Segment 1 lies wholly inside LPPC (Lisboa FIR)  -> weather via Open-Meteo
+//   - Segment 2 lies wholly inside LECM (Madrid FIR)  -> weather via the
+//     weather-lecm-2026-06-19.csv import
+// The split point (41.1342, -7.999) is where the Porto->Madrid track crosses
+// lon -7.999, so each segment maps to exactly one air control area.
+flight FR301 {
+  type: regular
+
+  route {
+    origin: LPPR
+    destination: LEMD
+  }
+
+  leg 1 {
+    departure { airport: LPPR  datetime: 2026-06-19T09:00 }
+    arrival   { airport: LEMD  datetime: 2026-06-19T10:10 }
+    fuel: 3800 kg
+    segments {
+      // LPPC (Lisboa FIR): Porto -> western edge of the Madrid FIR.
+      segment {
+        start: (41.2356, -8.6781)
+        end:   (41.1342, -7.9990)
+        slots {
+          slot { altitude: 9000 m  width: 500 m }
+        }
+        wind { direction: 270  speed: 12.0 m/s }
+      }
+      // LECM (Madrid FIR): FIR boundary -> Madrid-Barajas.
+      segment {
+        start: (41.1342, -7.9990)
+        end:   (40.4719, -3.5626)
+        slots {
+          slot { altitude: 9000 m  width: 500 m }
+        }
+        wind { direction: 275  speed: 14.0 m/s }
+      }
+    }
+  }
+}

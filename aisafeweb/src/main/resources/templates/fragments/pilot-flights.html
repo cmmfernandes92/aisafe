@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Shared Pilot Operations panel: the signed-in pilot's flights and the state
+     of each flight's current plan (DRAFT / VALIDATED / TESTED), filterable per
+     column. Reused across the Pilot Operations pages. -->
+<article th:fragment="panel(flights, planStatuses)" class="card table-card">
+  <div class="card-head">
+    <h2>My Flights &amp; Plans</h2>
+    <button class="refresh-action" type="button" aria-label="Refresh my flights" title="Refresh"
+            hx-get="/modules/pilot-operations/flights/table"
+            hx-target="#pilot-flights-tbody" hx-swap="outerHTML"
+            hx-include="#pilot-flight-filters">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M20 11a8 8 0 1 0-2.3 5.7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <path d="M20 4v7h-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="refresh-text">Refresh</span>
+    </button>
+  </div>
+
+  <div class="flight-filter-bar" id="pilot-flight-filters">
+    <input name="route" placeholder="Filter by flight / route…"
+           hx-get="/modules/pilot-operations/flights/table"
+           hx-trigger="input changed delay:300ms, search"
+           hx-target="#pilot-flights-tbody" hx-swap="outerHTML"
+           hx-include="#pilot-flight-filters">
+    <input name="date" type="date" title="Departure date"
+           hx-get="/modules/pilot-operations/flights/table"
+           hx-trigger="change"
+           hx-target="#pilot-flights-tbody" hx-swap="outerHTML"
+           hx-include="#pilot-flight-filters">
+    <select name="status" title="Plan state"
+            hx-get="/modules/pilot-operations/flights/table"
+            hx-trigger="change"
+            hx-target="#pilot-flights-tbody" hx-swap="outerHTML"
+            hx-include="#pilot-flight-filters">
+      <option value="">All states</option>
+      <option th:each="s : ${planStatuses}" th:value="${s}" th:text="${s}">DRAFT</option>
+    </select>
+  </div>
+
+  <table class="sortable-table">
+    <thead>
+    <tr>
+      <th>Flight</th>
+      <th>Departure</th>
+      <th>Aircraft</th>
+      <th>Plans</th>
+      <th>Plan State</th>
+    </tr>
+    </thead>
+    <tbody th:replace="~{fragments/pilot-flights :: rows(${flights})}"></tbody>
+  </table>
+</article>
+
+<!-- The tbody also re-fetches itself when a form on the page reports a result
+     (pilot-flights.js fires "pilot-flights-refresh"), keeping the list and the
+     plan states in sync after Create Flight / Import Flight Plan. -->
+<tbody th:fragment="rows(flights)" id="pilot-flights-tbody"
+       hx-get="/modules/pilot-operations/flights/table"
+       hx-trigger="pilot-flights-refresh from:body"
+       hx-include="#pilot-flight-filters"
+       hx-swap="outerHTML">
+  <tr th:each="f : ${flights}">
+    <td class="mono" th:text="${f.route()}">FR401</td>
+    <td class="mono" th:text="${f.departure()}">2026-06-12 13:00</td>
+    <td class="mono" th:text="${f.aircraft()}">CS-MNB</td>
+    <td class="mono" th:text="${f.planCount()}">1</td>
+    <td><span th:class="'plan-badge plan-' + ${#strings.toLowerCase(f.planStatus())}"
+              th:text="${f.planStatus()}">DRAFT</span></td>
+  </tr>
+  <tr th:if="${#lists.isEmpty(flights)}">
+    <td colspan="5" class="empty">No flights match. Create a flight first — it starts with a DRAFT plan.</td>
+  </tr>
+</tbody>
+
+</body>
+</html>

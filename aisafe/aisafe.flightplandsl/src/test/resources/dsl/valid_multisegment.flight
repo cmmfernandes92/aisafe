@@ -1,0 +1,42 @@
+// Long-haul leg broken into 3 segments
+flight LH4205 {
+  type: charter
+
+  route {
+    origin: EDDF
+    destination: KJFK
+  }
+
+  leg 1 {
+    departure { airport: EDDF  datetime: 2026-07-01T10:00 }
+    arrival   { airport: KJFK  datetime: 2026-07-01T18:30 }
+    fuel: 65000 kg
+    segments {
+      segment {
+        start: (50.03,   8.56)
+        end:   (51.50, -10.00)
+        slots {
+          slot { altitude: 11000 m  width: 800 m }
+        }
+        wind { direction: 250  speed: 25.0 m/s }
+      }
+      segment {
+        start: (51.50, -10.00)
+        end:   (50.00, -40.00)
+        slots {
+          slot { altitude: 11500 m  width: 800 m }
+          slot { altitude: 12000 m  width: 900 m }
+        }
+        wind { direction: 270  speed: 30.0 m/s }
+      }
+      segment {
+        start: (50.00, -40.00)
+        end:   (40.64, -73.78)
+        slots {
+          slot { altitude: 10500 m  width: 700 m }
+        }
+        wind { direction: 280  speed: 22.5 m/s }
+      }
+    }
+  }
+}

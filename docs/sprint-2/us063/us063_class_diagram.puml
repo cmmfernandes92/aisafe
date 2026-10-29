@@ -1,0 +1,111 @@
+@startuml us063_class_diagram
+title US063 - Edit a Customer's Collaborator Class Diagram
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>> #95A5A6
+    FontColor<<external>> #1A1A1A
+}
+
+' ============================================
+' PRESENTATION (aisafe.app.backoffice.console)
+' ============================================
+package "Presentation" {
+    class EditCollaboratorUI {
+        + doShow() : boolean
+        + headline() : String
+    }
+}
+
+' ============================================
+' APPLICATION (aisafe.core)
+' ============================================
+package "Application" {
+    class EditCollaboratorController <<UseCaseController>> {
+        + activeCollaboratorsOf(CompanyIATACode) : Iterable<CompanyCollaborator>
+        + editContactInfo(collaboratorEmail, newContactEmail, newPhoneNumber) : Collaborator
+    }
+}
+
+' ============================================
+' DOMAIN (aisafe.core)
+' ============================================
+package "Domain" {
+    abstract class Collaborator <<aggregate root>> {
+        + identity() : Email
+        + contactEmail() : Email
+        + contactPhoneNumber() : PhoneNumber
+        + position() : Position
+        + status() : CollaboratorStatus
+        + changeContactDetails(Email, PhoneNumber) : void
+    }
+    note right of Collaborator
+        changeContactDetails() enforces:
+        - contactEmail must not be null
+        - contactPhoneNumber must not be null
+        Identity (login email), position,
+        customer, and status are immutable
+        through this use case.
+    end note
+
+    class CompanyCollaborator {
+        + companyCode() : CompanyIATACode
+    }
+
+    class Email <<value object>> {
+        + valueOf(String) : Email
+    }
+    note bottom of Email
+        Identity email: @EmbeddedId, immutable.
+        contactEmail: separate editable field.
+        Both validated for format; no domain
+        restriction on contactEmail.
+    end note
+
+    class PhoneNumber <<value object>>
+
+    interface CollaboratorRepository {
+        + ofIdentity(Email) : Optional<Collaborator>
+        + findAllActiveByCompanyCode(CompanyIATACode) : Iterable<CompanyCollaborator>
+        + save(Collaborator) : Collaborator
+    }
+
+    class CompanyIATACode <<value object>><<external>>
+}
+
+' ============================================
+' PERSISTENCE (aisafe.persistence.impl)
+' ============================================
+package "Persistence" {
+    class JpaCollaboratorRepository
+    class InMemoryCollaboratorRepository
+}
+
+' ============================================
+' Relationships
+' ============================================
+EditCollaboratorUI ..> EditCollaboratorController : uses
+
+EditCollaboratorController ..> CollaboratorRepository : loads & saves
+EditCollaboratorController ..> Collaborator : calls changeContactDetails()
+EditCollaboratorController ..> CompanyIATACode : filters by
+
+CompanyCollaborator --|> Collaborator
+Collaborator *-- Email : @EmbeddedId (identity)
+Collaborator *-- Email : contactEmail (editable)
+Collaborator *-- PhoneNumber : contactPhoneNumber (editable)
+
+JpaCollaboratorRepository ..|> CollaboratorRepository
+InMemoryCollaboratorRepository ..|> CollaboratorRepository
+
+@enduml

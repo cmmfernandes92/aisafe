@@ -1,0 +1,103 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>> #95A5A6
+    FontColor<<external>> #1A1A1A
+}
+
+' ============================================
+' PRESENTATION (aisafe.app.backoffice.console)
+' ============================================
+package "Presentation" {
+    class MainMenu <<external>> {
+        + buildMainMenu()
+    }
+    class RegisterAirControlAreaAction {
+        + execute() : boolean
+    }
+    class RegisterAirControlAreaUI {
+        + doShow() : boolean
+    }
+}
+
+' ============================================
+' APPLICATION (aisafe.core)
+' ============================================
+package "Application" {
+    class RegisterAirControlAreaController <<UseCaseController>> {
+        + registerArea(code, name, swLat, swLon, neLat, neLon) : AirControlArea
+    }
+}
+
+' ============================================
+' DOMAIN (aisafe.core)
+' ============================================
+package "Domain" {
+    class AirControlArea <<aggregate root>> {
+        + identity() : AreaCode
+        + name() : AreaName
+        + boundary() : GeographicBoundary
+    }
+    class AreaCode <<value object>>
+    class AreaName <<value object>>
+    class GeographicBoundary <<value object>> {
+        + contains(Coordinates) : boolean
+        + overlaps(GeographicBoundary) : boolean
+    }
+    class Coordinates <<value object>>
+    interface AirControlAreaRepository {
+        + findByCode(AreaCode) : Optional<AirControlArea>
+        + findByName(AreaName) : Optional<AirControlArea>
+        + findOverlapping(GeographicBoundary) : Iterable<AirControlArea>
+        + save(AirControlArea) : AirControlArea
+    }
+}
+
+' ============================================
+' PERSISTENCE (aisafe.persistence.impl)
+' ============================================
+package "Persistence" {
+    class InMemoryAirControlAreaRepository
+    class JpaAirControlAreaRepository
+}
+
+' ============================================
+' BOOTSTRAP (aisafe.bootstrappers)
+' ============================================
+package "Bootstrap" {
+    class AirControlAreaBootstrapper {
+        + execute() : boolean
+    }
+}
+
+' ============================================
+' Relationships
+' ============================================
+MainMenu --> RegisterAirControlAreaAction : registers
+RegisterAirControlAreaAction ..> RegisterAirControlAreaUI : invokes
+RegisterAirControlAreaUI ..> RegisterAirControlAreaController : uses
+
+RegisterAirControlAreaController ..> AirControlAreaRepository : uses
+RegisterAirControlAreaController ..> AirControlArea : creates
+
+AirControlArea *-- AreaCode
+AirControlArea *-- AreaName
+AirControlArea *-- GeographicBoundary
+GeographicBoundary *-- "2" Coordinates : SW, NE
+
+InMemoryAirControlAreaRepository ..|> AirControlAreaRepository
+JpaAirControlAreaRepository ..|> AirControlAreaRepository
+
+AirControlAreaBootstrapper ..> RegisterAirControlAreaController : uses
+
+@enduml

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AISafe - Register Weather Data</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260603-weather">
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar('register-weather-data', ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Weather Service</p>
+          <h1>Register Weather Data</h1>
+          <p class="page-copy">Manual entry adapter for the existing Weather console use case. Domain validation remains inside AISafe core value objects and controllers.</p>
+        </div>
+      </header>
+
+      <section class="areas-grid">
+        <article th:replace="~{fragments/table-card :: card(
+            'Weather Data',
+            '/modules/weather-service/weather-data/table',
+            '#weather-data-tbody',
+            'Refresh weather data',
+            ~{::#weather-data-head},
+            ~{fragments/weather-data :: rows(${snapshot.weatherData()})})}">
+          <thead id="weather-data-head">
+          <tr>
+            <th>Area</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Zone</th>
+            <th>Altitude</th>
+            <th>Wind</th>
+            <th>Source</th>
+          </tr>
+          </thead>
+        </article>
+
+        <aside class="card form-card">
+          <div class="card-head">
+            <h2>Create Weather Record</h2>
+            <span>POST /weather-service</span>
+          </div>
+          <div id="form-result"></div>
+          <form hx-post="/modules/weather-service/register-weather-data" hx-target="#form-result" hx-swap="innerHTML" class="stack">
+            <label>
+              <span>Air Control Area</span>
+              <select name="areaCode" required hx-get="/modules/weather-service/check-area" hx-trigger="change" hx-target="#area-feedback" hx-swap="innerHTML">
+                <option value="">Select area</option>
+                <option th:each="area : ${snapshot.areas()}" th:value="${area.code()}" th:text="|${area.code()} - ${area.name()}|">LPPC - Lisbon ACC</option>
+              </select>
+              <div id="area-feedback"></div>
+            </label>
+
+            <fieldset class="form-section">
+              <legend>Validity Period</legend>
+              <div class="form-grid">
+                <label><span>Start</span><input name="startTime" type="datetime-local" required></label>
+                <label><span>End</span><input name="endTime" type="datetime-local" required></label>
+              </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+              <legend>Zone Box</legend>
+              <div class="form-grid">
+                <label><span>SW Lat</span><input name="zoneSwLat" type="number" step="0.000001" min="-90" max="90" required></label>
+                <label><span>SW Lon</span><input name="zoneSwLon" type="number" step="0.000001" min="-180" max="180" required></label>
+                <label><span>NE Lat</span><input name="zoneNeLat" type="number" step="0.000001" min="-90" max="90" required></label>
+                <label><span>NE Lon</span><input name="zoneNeLon" type="number" step="0.000001" min="-180" max="180" required></label>
+              </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+              <legend>Altitude Band</legend>
+              <div class="form-grid">
+                <label><span>Lower ft</span><input name="altLowerFeet" type="number" step="1" min="0" required></label>
+                <label><span>Upper ft</span><input name="altUpperFeet" type="number" step="1" min="1" required></label>
+              </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+              <legend>Conditions</legend>
+              <div class="form-grid">
+                <label><span>Wind Speed kt</span><input name="windSpeed" type="number" step="0.1" min="0" required></label>
+                <label><span>Wind Direction deg</span><input name="windDirection" type="number" step="1" min="0" max="360" required></label>
+                <label><span>Temperature C</span><input name="temperature" type="number" step="0.1" placeholder="Optional"></label>
+                <label><span>Pressure hPa</span><input name="pressure" type="number" step="0.1" min="0.1" placeholder="Optional"></label>
+                <label><span>Visibility km</span><input name="visibility" type="number" step="0.1" min="0" placeholder="Optional"></label>
+              </div>
+              <p class="field-note">Wind is mandatory. Temperature, pressure and visibility are optional.</p>
+            </fieldset>
+
+            <label><span>Data Source</span><input name="dataSource" maxlength="80" placeholder="IPMA" required></label>
+
+            <button type="submit">Register Weather Data</button>
+          </form>
+        </aside>
+      </section>
+    </main>
+  </div>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/sortable-table.js"></script>
+</body>
+</html>

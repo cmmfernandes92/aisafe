@@ -1,0 +1,106 @@
+@startuml sd-us074
+title US074 — Sequence Diagram: Deactivate a Flight Route
+
+skinparam sequenceArrowThickness 1
+skinparam roundcorner 6
+skinparam ParticipantPadding 10
+skinparam BoxPadding 10
+
+actor "Air Transport Company\nCollaborator" as atcc
+participant ":DeactivateFlightRouteUI" as ui
+participant ":DeactivateFlightRouteController" as ctrl
+participant ":AirTransportCompanyRepository" as companyRepo
+participant ":FlightRouteRepository" as routeRepo
+participant ":FlightRepository" as flightRepo
+participant "route:FlightRoute" as agg
+
+activate atcc
+
+atcc -> ui : starts "Deactivate flight route"
+activate ui
+
+ui -> ctrl : activeRoutesOfMyCompany()
+activate ctrl
+ctrl -> companyRepo : findByIataCode(companyCode)
+activate companyRepo
+companyRepo --> ctrl : company
+deactivate companyRepo
+ctrl -> routeRepo : findActiveByCompany(company)
+activate routeRepo
+routeRepo --> ctrl : activeRoutes
+deactivate routeRepo
+ctrl --> ui : activeRoutes
+deactivate ctrl
+
+ui -> atcc : list active routes,\nprompt for routeName and effectiveDate
+deactivate ui
+
+atcc -> ui : routeName, effectiveDate
+activate ui
+
+ui -> ctrl : deactivateFlightRoute(routeName, effectiveDate)
+activate ctrl
+
+ctrl -> companyRepo : findByIataCode(companyCode)
+activate companyRepo
+companyRepo --> ctrl : company
+deactivate companyRepo
+
+ctrl -> routeRepo : ofIdentity(RouteName.valueOf(routeName))
+activate routeRepo
+routeRepo --> ctrl : route
+deactivate routeRepo
+
+note right of ctrl
+  Application-layer checks (cross-aggregate
+  or authorization — cannot live in the root):
+    1. route exists
+    2. route.company().sameAs(company)  [ownership]
+end note
+
+ctrl -> ctrl : verify route.company().sameAs(company)
+activate ctrl
+deactivate ctrl
+
+ctrl -> flightRepo : existsForRouteOnOrAfter(routeName, effectiveDate)
+activate flightRepo
+
+note right of flightRepo
+  AC2 guard: a flight exists on the route
+  on or after the effective date?
+  Query is DB-side (JPQL), not in-Java.
+  If true → IllegalStateException (route
+  has planned flights, cannot deactivate).
+end note
+
+flightRepo --> ctrl : false  [no planned flights — AC2 guard passes]
+deactivate flightRepo
+
+ctrl -> agg : deactivate(effectiveDate)
+activate agg
+
+note right of agg
+  Tell-Don't-Ask: the root mutates its own
+  state and enforces its own invariant:
+    - must currently be active
+    - records deactivatedFrom = effectiveDate
+    - sets active = false
+end note
+
+agg --> ctrl : (state changed)
+deactivate agg
+
+ctrl -> routeRepo : save(route)
+activate routeRepo
+routeRepo --> ctrl : route (persisted)
+deactivate routeRepo
+
+ctrl --> ui : route
+deactivate ctrl
+
+ui --> atcc : "Flight route [routeName] deactivated\nfrom [effectiveDate]"
+deactivate ui
+
+deactivate atcc
+
+@enduml

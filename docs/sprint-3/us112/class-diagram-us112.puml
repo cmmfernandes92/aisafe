@@ -1,0 +1,182 @@
+@startuml class-diagram-us112
+title US112 — Class Diagram: Generate Monthly Statistics Report
+
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam linetype ortho
+skinparam PackagePadding 10
+skinparam classPadding 6
+
+' ─────────────────────────────────────────────
+' PRESENTATION LAYER
+' ─────────────────────────────────────────────
+package "aisafe.app.fco.console\n(Presentation)" #EAF4FB {
+
+    class GenerateMonthlyReportAction {
+        + execute() : boolean
+    }
+
+    class GenerateMonthlyReportUI {
+        - controller : GenerateMonthlyReportController
+        --
+        + headline() : String
+        # doShow() : boolean
+    }
+
+    GenerateMonthlyReportAction ..> GenerateMonthlyReportUI : «creates»
+}
+
+' ─────────────────────────────────────────────
+' APPLICATION LAYER
+' ─────────────────────────────────────────────
+package "aisafe.core\n(Application)" #EBF5EB {
+
+    class GenerateMonthlyReportController {
+        - EVOLUTION_MONTHS : int = 6
+        - TOP_N : int = 10
+        - repository : MonthlyStatisticsRepository
+        - generator : MonthlyReportGenerator
+        --
+        + generate(\n  period : MonthlyReportPeriod,\n  outputPath : Path\n) : void
+        + preview(\n  period : MonthlyReportPeriod\n) : MonthlyReportData
+        + outputFileExtension() : String
+        - collectData(\n  period : MonthlyReportPeriod\n) : MonthlyReportData
+    }
+
+    interface "ReportGenerator<D>" as ReportGenerator <<Strategy>> {
+        + generate(data : D, outputPath : Path) : void
+        + fileExtension() : String
+    }
+
+    interface MonthlyReportGenerator <<Strategy>> {
+    }
+
+    ReportGenerator <|-- MonthlyReportGenerator : extends
+}
+
+' ─────────────────────────────────────────────
+' DOMAIN / DTO LAYER
+' ─────────────────────────────────────────────
+package "aisafe.core\n(Domain & DTOs)" #FEF9E7 {
+
+    class MonthlyReportPeriod <<Value Object>> {
+        - year : int  {year >= 2000}
+        - month : int {1..12}
+        --
+        + MonthlyReportPeriod(year : int, month : int)
+        {static} + of(ym : YearMonth) : MonthlyReportPeriod
+        + year() : int
+        + month() : int
+        + label() : String
+        + previous() : MonthlyReportPeriod
+        + toYearMonth() : YearMonth
+    }
+
+    class MonthlyReportData <<Record>> {
+        + period : MonthlyReportPeriod
+        + totalFlights : int
+        + totalViolations : int
+        + totalSimulations : int
+        + topRoutes : List<RouteUsageStat>
+        + topCompanies : List<CompanyFlightStat>
+        + violationsByArea : List<ViolationAreaStat>
+        + evolution : List<MonthlyEvolutionPoint>
+    }
+
+    class RouteUsageStat <<Record>> {
+        + routeName : String
+        + companyName : String
+        + flightCount : int
+    }
+
+    class CompanyFlightStat <<Record>> {
+        + companyIata : String
+        + companyName : String
+        + flightCount : int
+    }
+
+    class ViolationAreaStat <<Record>> {
+        + areaCode : String
+        + areaName : String
+        + violationCount : int
+    }
+
+    class MonthlyEvolutionPoint <<Record>> {
+        + label : String
+        + totalFlights : int
+        + totalViolations : int
+    }
+
+    MonthlyReportData *-- MonthlyReportPeriod
+    MonthlyReportData *-- "0..*" RouteUsageStat
+    MonthlyReportData *-- "0..*" CompanyFlightStat
+    MonthlyReportData *-- "0..*" ViolationAreaStat
+    MonthlyReportData *-- "0..*" MonthlyEvolutionPoint
+}
+
+' ─────────────────────────────────────────────
+' REPOSITORY LAYER
+' ─────────────────────────────────────────────
+package "aisafe.core\n(Repository)" #FEF9E7 {
+
+    interface MonthlyStatisticsRepository <<Repository>> {
+        + countFlights(period) : int
+        + countViolations(period) : int
+        + countSimulations(period) : int
+        + topRoutesByFlights(period, limit) : List<RouteUsageStat>
+        + topCompaniesByFlights(period, limit) : List<CompanyFlightStat>
+        + violationsByArea(period) : List<ViolationAreaStat>
+        + monthlyEvolution(period, monthsBack) : List<MonthlyEvolutionPoint>
+    }
+}
+
+' ─────────────────────────────────────────────
+' INFRASTRUCTURE LAYER
+' ─────────────────────────────────────────────
+package "aisafe.core\n(Infrastructure — sprint stub)" #EBEBEB {
+
+    class HtmlMonthlyReportGenerator {
+        - CHARTJS_CDN : String
+        - PALETTE : String[]
+        --
+        + fileExtension() : String
+        + generate(data, outputPath) : void
+        - buildHtml(data) : String
+    }
+
+    class InMemoryMonthlyStatisticsRepository {
+    }
+
+    note bottom of InMemoryMonthlyStatisticsRepository
+        Sprint demo stub.
+        Replace with
+        JpaMonthlyStatisticsRepository
+        in a future sprint.
+    end note
+
+    MonthlyReportGenerator <|.. HtmlMonthlyReportGenerator : implements
+    MonthlyStatisticsRepository <|.. InMemoryMonthlyStatisticsRepository : implements
+}
+
+' ─────────────────────────────────────────────
+' LAYER RELATIONSHIPS
+' ─────────────────────────────────────────────
+GenerateMonthlyReportUI --> GenerateMonthlyReportController : uses
+GenerateMonthlyReportController --> MonthlyStatisticsRepository : uses
+GenerateMonthlyReportController --> MonthlyReportGenerator : uses
+GenerateMonthlyReportController ..> MonthlyReportData : «creates»
+
+note bottom of GenerateMonthlyReportController
+  DIP: depends on repository and generator
+  interfaces, never on concrete classes.
+  OCP: swapping generator changes output
+  format without touching this controller.
+end note
+
+note bottom of ReportGenerator
+  Generic Strategy interface for ALL
+  report types. D = data type.
+  Adding a new format = new class only.
+end note
+
+@enduml

@@ -1,0 +1,71 @@
+@startuml AreaFlightsSimulator_Components
+title Area Flights Simulator · Component Architecture
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam roundCorner 6
+skinparam defaultFontName "Helvetica"
+skinparam ArrowColor #5A6B7B
+skinparam ArrowFontColor #5A6B7B
+skinparam noteBackgroundColor #FFFDF0
+skinparam noteBorderColor #D8C97A
+skinparam actorStyle awesome
+
+skinparam package {
+  BackgroundColor #FFFFFF
+  BorderColor #B0BAC4
+  FontColor #2A3B4C
+  FontStyle bold
+}
+skinparam component {
+  BackgroundColor #EEF3F8
+  BorderColor #3B6EA5
+  FontColor #1A2B3C
+}
+
+actor "FCO / Power User" as user
+
+package "aisafeweb (Spring Boot server)" as server {
+  component "AisafeWebModule\n<size:10>nav entry + route constant</size>" as module
+  component "SimulatorController\n<size:10>HTTP route + access guard</size>" as controller
+  component "flight-mgmt-simulate-area.html\n<size:10>page template</size>" as template
+  component "Shared chrome\n<size:10>layout.html · app.css · sidebar.js</size>" as chrome
+}
+
+package "Browser (client runtime)" as browser {
+  component "simulator-map.js\n<size:10>renderer</size>" as renderer
+  component "sim-kernel.js\n<size:10>simulation state + step()</size>" as kernel
+  package "Vendor libs" as vendor #F9F9F9 {
+    component "MapLibre GL" as maplibre #FFFFFF
+    component "Three.js" as three #FFFFFF
+  }
+}
+
+package "SCOMP simulation (C · planned)" as scomp #F4F4F4 {
+  component "flight_proc.c\n<size:10>per-flight stepping</size>" as fproc #FAFAFA
+  component "violation.c\n<size:10>pairwise separation</size>" as viol #FAFAFA
+}
+
+user       --> controller : HTTP GET
+module     ..> controller : registers nav entry
+controller --> template   : renders\n(post auth/access guard)
+template   ..> chrome      : includes fragments
+controller --> browser    : delivers HTML + JS
+template   --> renderer   : bootstraps\n(import map)
+renderer   ..> kernel     : imports, consumes state
+renderer   --> maplibre   : uses
+renderer   --> three      : uses
+kernel     ..> fproc      : delegate step()
+kernel     ..> viol       : separation logic
+
+note bottom of browser
+  Fully client-side: the server delivers HTML and
+  static JS only. All motion, geometry, conflict
+  detection and rendering run in the browser.
+end note
+
+note right of scomp
+  Future integration. The JS kernel currently
+  reimplements this logic; step() and loadPreset()
+  are the replacement seams.
+end note
+@enduml

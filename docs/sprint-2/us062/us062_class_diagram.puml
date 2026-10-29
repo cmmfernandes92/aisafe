@@ -1,0 +1,133 @@
+@startuml us062_class_diagram
+title US062 - List Customer Collaborators Class Diagram
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>> #95A5A6
+    FontColor<<external>> #1A1A1A
+}
+
+' ============================================
+' PRESENTATION (aisafe.app.backoffice.console)
+' ============================================
+package "Presentation" {
+    class ListCollaboratorsAction {
+        + execute() : boolean
+    }
+    class ListCollaboratorsUI {
+        + doShow() : boolean
+        + headline() : String
+    }
+}
+
+' ============================================
+' APPLICATION (aisafe.core)
+' ============================================
+package "Application" {
+    class ListCollaboratorsController <<UseCaseController>> {
+        + allCompanies() : Iterable<AirTransportCompany>
+        + allAreas() : Iterable<AirControlArea>
+        + activeCollaboratorsOf(CompanyIATACode) : Iterable<CompanyCollaborator>
+        + activeCollaboratorsOf(AreaCode) : Iterable<AreaCollaborator>
+        + userOf(Email) : Optional<User>
+    }
+}
+
+' ============================================
+' DOMAIN (aisafe.core) - all reused from US061
+' ============================================
+package "Domain" {
+
+    abstract class Collaborator <<aggregate root>><<external>> {
+        + identity() : Email
+        + position() : Position
+        + status() : CollaboratorStatus
+    }
+    class CompanyCollaborator <<external>> {
+        + companyCode() : CompanyIATACode
+    }
+    class AreaCollaborator <<external>> {
+        + areaCode() : AreaCode
+    }
+    enum CollaboratorStatus <<external>><<enum>> {
+        ACTIVE
+        DISABLED
+    }
+    interface CollaboratorRepository <<external>> {
+        + findAllActiveByCompanyCode(CompanyIATACode) : Iterable<CompanyCollaborator>
+        + findAllActiveByAreaCode(AreaCode) : Iterable<AreaCollaborator>
+    }
+
+    class User <<aggregate root>><<external>> {
+        + identity() : Email
+        + systemUser() : SystemUser
+    }
+    class SystemUser <<external>> {
+        + name() : Name
+    }
+    class Email <<value object>><<external>>
+    class CompanyIATACode <<value object>><<external>>
+    class AreaCode <<value object>><<external>>
+    class AirTransportCompany <<aggregate root>><<external>>
+    class AirControlArea <<aggregate root>><<external>>
+    interface UserRepository <<external>>
+    interface AirTransportCompanyRepository <<external>>
+    interface AirControlAreaRepository <<external>>
+}
+
+' ============================================
+' PERSISTENCE (aisafe.persistence.impl) - reused from US061
+' ============================================
+package "Persistence" {
+    class InMemoryCollaboratorRepository <<external>>
+    class JpaCollaboratorRepository <<external>>
+}
+
+' ============================================
+' Relationships
+' ============================================
+
+' Presentation wiring
+ListCollaboratorsAction ..> ListCollaboratorsUI : invokes
+ListCollaboratorsUI ..> ListCollaboratorsController : uses
+ListCollaboratorsUI ..> User : reads name for display
+
+' Controller dependencies (constructor injection)
+ListCollaboratorsController ..> CollaboratorRepository : queries
+ListCollaboratorsController ..> UserRepository : resolves names
+ListCollaboratorsController ..> AirTransportCompanyRepository : validates / lists
+ListCollaboratorsController ..> AirControlAreaRepository : validates / lists
+ListCollaboratorsController ..> CompanyCollaborator : returns
+ListCollaboratorsController ..> AreaCollaborator : returns
+
+' Inheritance
+CompanyCollaborator --|> Collaborator
+AreaCollaborator --|> Collaborator
+
+' Aggregate composition
+Collaborator *-- Email : @EmbeddedId
+Collaborator *-- CollaboratorStatus
+CompanyCollaborator *-- CompanyIATACode
+AreaCollaborator *-- AreaCode
+
+' Cross-aggregate references
+Collaborator ..> User : identified by email
+CompanyCollaborator --> AirTransportCompany : references by CompanyIATACode
+AreaCollaborator --> AirControlArea : references by AreaCode
+User *-- SystemUser : authenticates as
+
+' Persistence
+InMemoryCollaboratorRepository ..|> CollaboratorRepository
+JpaCollaboratorRepository ..|> CollaboratorRepository
+
+@enduml

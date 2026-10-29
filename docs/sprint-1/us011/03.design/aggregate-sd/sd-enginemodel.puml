@@ -1,0 +1,74 @@
+@startuml
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+autonumber
+
+title Create Engine Model
+
+actor "Backoffice Operator" as BO
+participant ":EngineModelUI" as UI <<presentation>>
+participant ":CreateEngineModelController" as CTRL <<application>>
+participant ":EngineModelRepository" as EMR <<persistence>>
+participant ":MakerRepository" as MR <<persistence>>
+participant ":EngineModel" as EM <<domain>>
+
+activate BO
+
+== Phase 1: Load reference data ==
+
+BO -> UI : asks to register\nan engine model
+activate UI
+
+UI -> CTRL : create()
+activate CTRL
+
+CTRL -> MR : findEngineMakers()
+activate MR
+MR --> CTRL : makers
+deactivate MR
+
+CTRL --> UI : makers
+UI --> BO : shows available makers
+deactivate UI
+
+== Phase 2: Define engine model ==
+
+BO -> UI : enters engine model data
+activate UI
+
+UI -> CTRL : createEngineModel(modelId, modelName,\nmakerId, type, power,\nfuelType, efficiency, certified)
+
+CTRL -> EMR : existsByNameAndMaker(modelName, makerId)
+activate EMR
+EMR --> CTRL : false
+deactivate EMR
+
+CTRL -> MR : findById(makerId)
+activate MR
+MR --> CTRL : maker
+deactivate MR
+
+CTRL -> EM ** : create(modelId, modelName, maker,\ntype, power, fuelType,\nefficiency, certified)
+
+note right of EM
+  Validates (Information Expert):
+  - model name + maker is unique
+  - power is valid
+  - fuel type is valid
+  - efficiency is valid
+  - certification status is defined
+end note
+
+CTRL -> EMR : save(engineModel)
+activate EMR
+EMR --> CTRL : engineModel
+deactivate EMR
+
+CTRL --> UI : engineModel
+deactivate CTRL
+
+UI --> BO : shows successful creation
+deactivate UI
+deactivate BO
+
+@enduml

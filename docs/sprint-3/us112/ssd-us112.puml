@@ -1,0 +1,27 @@
+@startuml ssd-us112
+skinparam actorStyle awesome
+
+actor "Flight Control\nOperator" as FCO
+participant ":AISafe System" as System
+
+activate FCO
+
+FCO -> System : generateMonthlyReport()
+activate System
+System --> FCO : prompt for year, month, output path
+deactivate System
+
+FCO -> System : year, month, outputPath
+activate System
+
+note right of System
+  Validate year (>= 2000) and month (1-12).
+  Collect monthly statistics for the period.
+  Render HTML report with Chart.js charts.
+  Write report file to outputPath.
+end note
+
+System --> FCO : "Report saved to [outputPath]"
+deactivate System
+
+@enduml

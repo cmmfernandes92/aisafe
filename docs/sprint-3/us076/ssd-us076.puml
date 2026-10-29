@@ -1,0 +1,14 @@
+@startuml
+skinparam actorStyle awesome
+
+actor "Air Transport Company Collaborator" as A
+participant ":AISafe System" as System
+
+activate A
+
+A -> System : requestPilotRoster()
+activate System
+System --> A : display pilot roster
+deactivate System
+
+@enduml

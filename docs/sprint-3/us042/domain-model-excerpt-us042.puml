@@ -1,0 +1,94 @@
+@startuml domain-model-excerpt-us042
+title Domain Model Excerpt Relevant to US042 (Import Bulk Weather Data)
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor      #5B9BD5
+skinparam classFontColor        #1A1A1A
+skinparam packageStyle           rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor     #888888
+skinparam defaultFontSize        11
+hide empty members
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>>     #95A5A6
+    FontColor<<external>>       #1A1A1A
+    BackgroundColor<<new>>      #D5F5E3
+    BorderColor<<new>>          #58D68D
+}
+
+' ============================================================
+' AGGREGATE: WeatherData (reused from US041)
+' US042 introduces NO new aggregate. It bulk-loads the SAME
+' WeatherData aggregate US041 registers one record at a time.
+' Classes tagged <<new>> are the deltas the mandatory sample
+' file forces onto the existing US041 model (see readme 3.3).
+' ============================================================
+package "WeatherData Aggregate" {
+    class WeatherData <<aggregate root>> {
+        temperature  [optional]
+        atmosphericPressure  [optional]
+        visibility  [optional]
+    }
+    class WeatherDataId <<value object>>
+
+    class TimePeriod <<value object>> {
+        startTime
+        endTime
+    }
+
+    class WeatherZone <<value object>> <<new>>
+    class AltitudeBand <<value object>> <<new>> {
+        lowerFeet
+        upperFeet
+    }
+    class Coordinates <<value object>> {
+        latitude
+        longitude
+    }
+
+    class WeatherWindSpeed <<value object>>
+    class WeatherWindDirection <<value object>>
+    class DataSource <<value object>>
+
+    WeatherData *-- WeatherDataId
+    WeatherData *-- TimePeriod
+    WeatherData *-- WeatherZone
+    WeatherData *-- WeatherWindSpeed
+    WeatherData *-- WeatherWindDirection
+    WeatherData *-- DataSource
+
+    WeatherZone *-- AltitudeBand
+    WeatherZone *-- "2" Coordinates : SW, NE
+}
+
+note top of Coordinates
+  Same VO type reused from the
+  AirControlArea aggregate (no duplication).
+  The instance belongs to WeatherData.
+end note
+
+' ============================================================
+' EXTERNAL AGGREGATE (reference only, grey)
+' The target area is selected at import time and must already
+' exist. WeatherData references it root-to-root, by identity
+' (AreaCode); no internal of either aggregate crosses the
+' boundary.
+' ============================================================
+package "AirControlArea Aggregate" #EEEEEE {
+    class AirControlArea <<aggregate root>> <<external>>
+}
+
+WeatherData --> AirControlArea : for area (by AreaCode, must exist)
+
+note bottom of WeatherData
+  No uniqueness invariant on
+  (area, zone, band, period):
+  multiple providers (DataSource)
+  may forecast the same area+time,
+  proven by the CW vs HP samples.
+end note
+
+@enduml

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AISafe - Airports</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260531-table-polish">
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar('airports', ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Reference Data</p>
+          <h1>Airports</h1>
+          <p class="page-copy">Create and inspect airports linked to a country and an air control area.</p>
+        </div>
+      </header>
+
+      <section class="areas-grid">
+        <article th:replace="~{fragments/table-card :: card(
+            'Registered Airports',
+            '/airports/table',
+            '#airports-tbody',
+            'Refresh airports',
+            ~{::#airports-head},
+            ~{fragments/airports :: rows(${snapshot.airports()})})}">
+          <thead id="airports-head">
+          <tr>
+            <th>ICAO</th>
+            <th>IATA</th>
+            <th>Name</th>
+            <th>Town</th>
+            <th>Country</th>
+            <th>Area</th>
+            <th>Elev.</th>
+            <th>Lat</th>
+            <th>Lon</th>
+          </tr>
+          </thead>
+        </article>
+
+        <aside class="card form-card">
+          <div class="card-head">
+            <h2>Create Airport</h2>
+            <span>POST /airports</span>
+          </div>
+          <div id="form-result"></div>
+          <form hx-post="/airports" hx-target="#form-result" hx-swap="innerHTML" class="stack">
+            <div class="form-grid">
+              <label>
+                <span>ICAO Code</span>
+                <input name="icaoCode" required maxlength="4" placeholder="LPPT"
+                       hx-get="/airports/check-icao" hx-trigger="blur changed delay:200ms"
+                       hx-target="#icao-feedback" hx-swap="innerHTML"
+                       oninput="this.value=this.value.toUpperCase()">
+                <div id="icao-feedback"></div>
+              </label>
+              <label>
+                <span>IATA Code</span>
+                <input name="iataCode" required maxlength="3" placeholder="LIS"
+                       hx-get="/airports/check-iata" hx-trigger="blur changed delay:200ms"
+                       hx-target="#iata-feedback" hx-swap="innerHTML"
+                       oninput="this.value=this.value.toUpperCase()">
+                <div id="iata-feedback"></div>
+              </label>
+            </div>
+
+            <label>
+              <span>Airport Name</span>
+              <input name="airportName" required maxlength="96" placeholder="Humberto Delgado Airport">
+            </label>
+            <label>
+              <span>Town</span>
+              <input name="town" required maxlength="64" placeholder="Lisbon">
+            </label>
+
+            <div class="form-grid">
+              <label>
+                <span>Country</span>
+                <select name="countryCode" required
+                        hx-get="/airports/check-country" hx-trigger="change"
+                        hx-target="#country-feedback" hx-swap="innerHTML">
+                  <option value="">Select country</option>
+                  <option th:each="country : ${snapshot.countries()}"
+                          th:value="${country.code()}"
+                          th:text="|${country.code()} - ${country.name()}|">351 - Portugal</option>
+                </select>
+                <div id="country-feedback"></div>
+              </label>
+              <label>
+                <span>Air Control Area</span>
+                <select name="areaCode" required
+                        hx-get="/airports/check-position" hx-trigger="change"
+                        hx-include="[name='areaCode'], [name='latitude'], [name='longitude']"
+                        hx-target="#position-feedback" hx-swap="innerHTML">
+                  <option value="">Select area</option>
+                  <option th:each="area : ${snapshot.areas()}"
+                          th:value="${area.code()}"
+                          th:text="|${area.code()} - ${area.name()}|">LPPC - Lisbon ACC</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label><span>Elevation (m)</span><input name="elevationMeters" type="number" step="0.1" required></label>
+              <label><span>Latitude</span><input name="latitude" type="number" step="0.000001" min="-90" max="90" required
+                                                 hx-get="/airports/check-position" hx-trigger="blur changed delay:200ms"
+                                                 hx-include="[name='areaCode'], [name='latitude'], [name='longitude']"
+                                                 hx-target="#position-feedback" hx-swap="innerHTML"></label>
+              <label><span>Longitude</span><input name="longitude" type="number" step="0.000001" min="-180" max="180" required
+                                                  hx-get="/airports/check-position" hx-trigger="blur changed delay:200ms"
+                                                  hx-include="[name='areaCode'], [name='latitude'], [name='longitude']"
+                                                  hx-target="#position-feedback" hx-swap="innerHTML"></label>
+            </div>
+            <div id="position-feedback"></div>
+
+            <button type="submit">Create Airport</button>
+          </form>
+        </aside>
+      </section>
+    </main>
+  </div>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/sortable-table.js"></script>
+</body>
+</html>

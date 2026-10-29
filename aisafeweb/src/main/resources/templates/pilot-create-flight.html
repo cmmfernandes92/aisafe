@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AISafe - Create Flight</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260609-pilot-flights">
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar('create-flight', ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Pilot Operations</p>
+          <h1>Create Flight</h1>
+          <p class="page-copy">
+            Register a flight for a route and create its initial DRAFT flight plan.
+            The flight's pilot is you, the signed-in user; you must belong to the
+            route's company and be certified for the aircraft's model.
+          </p>
+        </div>
+      </header>
+
+      <section class="areas-grid">
+        <article th:replace="~{fragments/pilot-flights :: panel(${flights}, ${planStatuses})}"></article>
+
+        <aside class="card form-card">
+          <div class="card-head">
+            <h2>New Flight</h2>
+            <span>POST /modules/pilot-operations/create-flight</span>
+          </div>
+          <div id="form-result"></div>
+          <form hx-post="/modules/pilot-operations/create-flight" hx-target="#form-result" hx-swap="innerHTML" class="stack">
+            <label>
+              <span>Route name</span>
+              <input name="routeName" maxlength="16" placeholder="TP123" required>
+            </label>
+            <label>
+              <span>Aircraft registration</span>
+              <input name="registration" maxlength="16" placeholder="CS-TUA" required>
+            </label>
+            <label>
+              <span>Departure date / time</span>
+              <input name="departure" type="datetime-local" required>
+            </label>
+            <p class="field-note">
+              A route can have at most one flight per day. The aircraft must belong to
+              the route's company and not be decommissioned. The new flight starts with
+              an empty <strong>DRAFT</strong> plan — use <em>Import Flight Plan</em>
+              Import Flight Plan to load a validated DSL file into it.
+            </p>
+            <button type="submit">Create Flight</button>
+          </form>
+        </aside>
+      </section>
+    </main>
+  </div>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/sortable-table.js"></script>
+  <script src="/js/pilot-flights.js"></script>
+</body>
+</html>

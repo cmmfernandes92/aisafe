@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AISafe - Weather Service</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260605-wxicons2">
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar('dashboard', ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Weather Service</p>
+          <h1>Weather Coverage Dashboard</h1>
+          <p class="page-copy">Operational view for the Weather Person: which air control areas have a forecast valid for the next 24h, and which need data registered or imported before that window.</p>
+        </div>
+      </header>
+
+      <section class="kpi-grid">
+        <article class="card kpi" th:each="kpi : ${snapshot.kpis()}">
+          <span th:text="${kpi.label()}">Air Control Areas</span>
+          <strong th:text="${kpi.value()}">0</strong>
+          <small th:text="${kpi.caption()}">Repository backed</small>
+        </article>
+      </section>
+
+      <section class="card map-card">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">Coverage Map</p>
+            <h2>Air Control Areas - Weather Data</h2>
+          </div>
+            <span><i class="legend-box"></i>Covered <i class="legend-box missing"></i>No data</span>
+        </div>
+        <div class="map-shell">
+          <div class="map-wrap">
+            <div id="weather-map"></div>
+            <div class="zoom-tier">
+              <span>Detail</span>
+              <button id="weather-zoom-tier-overview" data-zoom="4">Overview</button>
+              <button id="weather-zoom-tier-areas" data-zoom="5">Areas</button>
+            </div>
+          </div>
+          <aside class="map-panel">
+            <header>Weather Coverage<small>Live conditions by Open-Meteo</small></header>
+            <button th:each="area, iter : ${snapshot.areaMap()}" type="button" th:attr="data-area-index=${iter.index}" class="weather-map-area-btn">
+              <span>
+                <strong th:text="${area.code()}">LPPC</strong>
+                <small th:text="${area.name()}">Lisbon ACC</small>
+                <small class="weather-live-meteo" th:attr="data-area-code=${area.code()}">Live weather: loading</small>
+              </span>
+              <em th:text="|${area.weatherRecordCount()} records|">0 records</em>
+            </button>
+            <div th:if="${#lists.isEmpty(snapshot.areaMap())}" class="map-empty">No air control areas registered.</div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="grid-two" style="margin-top:18px;">
+        <article class="card">
+          <div class="card-head">
+            <h2>Coverage by Area</h2>
+            <span th:text="|${snapshot.coverageGapCount()} gaps next 24h|">0 gaps next 24h</span>
+          </div>
+          <div class="weather-area-list">
+            <div th:each="area : ${snapshot.areas()}" th:classappend="${' ' + area.statusClass()}" class="weather-area-row">
+              <span>
+                <strong class="mono" th:text="${area.code()}">LPPC</strong>
+                <small th:text="${area.name()}">Lisbon ACC</small>
+                <small class="coverage-window" th:if="${area.hasWeatherData()}" th:text="|valid ${area.coverageWindow()}|">valid Jun 22 05:00 -> Jun 22 07:30</small>
+              </span>
+              <em th:text="${area.status()}">No data</em>
+            </div>
+            <div th:if="${#lists.isEmpty(snapshot.areas())}" class="empty">No areas available.</div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Latest Weather Records</h2>
+            <span>Most recent 8</span>
+          </div>
+          <table class="sortable-table">
+            <thead>
+            <tr>
+              <th>Area</th>
+              <th>Start</th>
+              <th>End</th>
+              <th>Wind</th>
+              <th>Source</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="row : ${snapshot.latestWeather()}">
+              <td class="mono" th:text="${row.areaCode()}">LPPC</td>
+              <td class="mono" th:text="${row.startTime()}">2026-06-03 10:00</td>
+              <td class="mono" th:text="${row.endTime()}">2026-06-03 11:00</td>
+              <td class="mono" th:text="|${row.windDirection()} deg / ${row.windSpeed()} kt|">090 deg / 12 kt</td>
+              <td th:text="${row.dataSource()}">Provider</td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(snapshot.latestWeather())}">
+              <td colspan="5" class="empty">No weather data registered.</td>
+            </tr>
+            </tbody>
+          </table>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <script th:inline="javascript">
+    window.AISAFE_WEATHER_AREAS = /*[[${snapshot.areaMap()}]]*/ [];
+  </script>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/weather-map.js?v=20260605-wxicons2"></script>
+</body>
+</html>

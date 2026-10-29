@@ -1,0 +1,87 @@
+@startuml
+
+skinparam classAttributeIconSize 0
+
+' =====================
+' Controller Layer
+' =====================
+class AddPilotController {
+    + addPilot(userEmail, companyIata, aircraftModelIds)
+}
+
+' =====================
+' Application / Domain Service
+' =====================
+class PilotCreationService {
+    + createPilot(user, company, aircraftModels) : Pilot
+}
+
+' =====================
+' Domain Layer
+' =====================
+class Pilot <<aggregate root>> {
+    - status : PilotStatus
+    + isActive() : boolean
+}
+
+class PilotCertification <<entity>>
+
+enum PilotStatus {
+    ACTIVE
+    INACTIVE
+}
+
+class User <<aggregate root>> {
+    + email : Email
+}
+
+class Email <<value object>>
+
+class AirTransportCompany <<aggregate root>> {
+    + companyName
+}
+
+class AircraftModel <<aggregate root>>
+
+' =====================
+' Repositories
+' =====================
+interface PilotRepository {
+    + save(pilot : Pilot)
+    + ofUser(email : Email) : Optional<Pilot>
+}
+
+interface UserRepository {
+    + ofIdentity(email : Email) : Optional<User>
+}
+
+interface AircraftModelRepository {
+    + ofIdentity(id) : Optional<AircraftModel>
+}
+
+interface AirTransportCompanyRepository {
+    + ofIdentity(iata) : Optional<AirTransportCompany>
+}
+
+' =====================
+' Relationships
+' =====================
+
+AddPilotController --> PilotCreationService
+
+AddPilotController --> UserRepository
+AddPilotController --> AircraftModelRepository
+AddPilotController --> AirTransportCompanyRepository
+AddPilotController --> PilotRepository
+
+PilotCreationService --> Pilot
+
+Pilot --> "1" User
+Pilot --> "1" AirTransportCompany
+Pilot --> "1..*" PilotCertification
+
+PilotCertification --> AircraftModel
+
+Pilot --> PilotStatus
+
+@enduml

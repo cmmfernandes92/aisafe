@@ -1,0 +1,149 @@
+@startuml us043_class_diagram
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>> #95A5A6
+    FontColor<<external>> #1A1A1A
+}
+
+' ============================================
+' PRESENTATION
+' ============================================
+package "Presentation" {
+    class MainMenu <<external>> {
+        + buildMainMenu()
+    }
+    class ConsultWeatherDataAction {
+        + execute() : boolean
+    }
+    class ConsultWeatherDataUI {
+        + doShow() : boolean
+    }
+}
+
+' ============================================
+' APPLICATION
+' ============================================
+package "Application" {
+    class ConsultWeatherDataController <<UseCaseController>> {
+        + listAirControlAreas() : Iterable<AirControlArea>
+        + consultWeatherData(areaCodeValue : String, day : LocalDate) : Iterable<WeatherData>
+    }
+}
+
+' ============================================
+' DOMAIN
+' ============================================
+package "Domain" {
+    class WeatherData <<aggregate root>> {
+        + identity() : WeatherDataId
+        + areaCode() : AreaCode
+        + zone() : WeatherZone
+        + timePeriod() : TimePeriod
+        + temperature() : Double
+        + pressure() : Double
+        + visibility() : Double
+        + windSpeed() : WeatherWindSpeed
+        + windDirection() : WeatherWindDirection
+        + dataSource() : DataSource
+    }
+
+    class WeatherDataId <<value object>>
+
+    class TimePeriod <<value object>> {
+        + startTime : LocalDateTime
+        + endTime : LocalDateTime
+    }
+
+    class WeatherWindSpeed <<value object>>
+    class WeatherWindDirection <<value object>>
+    class DataSource <<value object>>
+
+    class WeatherZone <<value object>> {
+        + southwest() : Coordinates
+        + northeast() : Coordinates
+        + altitudeBand() : AltitudeBand
+    }
+
+    class AltitudeBand <<value object>> {
+        + lowerFeet() : double
+        + upperFeet() : double
+    }
+
+    class Coordinates <<external>> {
+        + latitude() : double
+        + longitude() : double
+    }
+
+    interface WeatherDataRepository {
+        + findByAreaCodeAndDay(AreaCode, LocalDate) : Iterable<WeatherData>
+    }
+
+    ' External — area existence check
+    class AirControlArea <<external>>
+    class AreaCode <<external>>
+
+    interface AirControlAreaRepository <<external>> {
+        + findByCode(AreaCode) : Optional<AirControlArea>
+        + findAll() : Iterable<AirControlArea>
+    }
+}
+
+' ============================================
+' INFRASTRUCTURE
+' ============================================
+package "Infrastructure" {
+    class AuthorizationService <<external>> {
+        + ensureAuthenticatedUserHasAnyOf(role) : void
+    }
+}
+
+' ============================================
+' PERSISTENCE
+' ============================================
+package "Persistence" {
+    class InMemoryWeatherDataRepository
+    class JpaWeatherDataRepository
+}
+
+' ============================================
+' Relationships
+' ============================================
+MainMenu --> ConsultWeatherDataAction : registers
+ConsultWeatherDataAction ..> ConsultWeatherDataUI : invokes
+ConsultWeatherDataUI ..> ConsultWeatherDataController : uses
+
+ConsultWeatherDataController ..> AuthorizationService : verifies role
+ConsultWeatherDataController ..> AirControlAreaRepository : checks area exists
+ConsultWeatherDataController ..> WeatherDataRepository : queries
+ConsultWeatherDataController ..> WeatherData : returns
+
+WeatherDataRepository ..> WeatherData
+
+WeatherData *-- WeatherDataId
+WeatherData *-- TimePeriod
+WeatherData *-- WeatherWindSpeed
+WeatherData *-- WeatherWindDirection
+WeatherData *-- DataSource
+WeatherData *-- WeatherZone
+WeatherData --> AreaCode : areaCode
+
+WeatherZone *-- AltitudeBand
+WeatherZone *-- "2" Coordinates : southwest / northeast
+
+AirControlArea *-- AreaCode
+
+InMemoryWeatherDataRepository ..|> WeatherDataRepository
+JpaWeatherDataRepository ..|> WeatherDataRepository
+
+@enduml

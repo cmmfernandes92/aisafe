@@ -1,0 +1,60 @@
+@startuml ssd-us086
+skinparam actorStyle awesome
+
+actor "Pilot" as P
+participant ":AISafe System" as sys
+
+activate P
+
+P -> sys : launchRemoteClient(serverAddress, port)
+activate sys
+sys --> P : remote access interface ready
+deactivate sys
+
+P -> sys : login(username, password)
+activate sys
+
+note right of sys
+  Only users with the PILOT role
+  are granted access.
+end note
+
+sys -> sys : authenticate(username, password)
+activate sys
+deactivate sys
+sys -> sys : verifyRole(PILOT)
+activate sys
+deactivate sys
+
+alt valid credentials AND role == PILOT
+    sys --> P : access granted
+else invalid credentials or wrong role
+    sys --> P : access denied
+    deactivate sys
+end
+
+
+loop while session active
+    P -> sys : requestPilotOperation(operationType, args)
+    activate sys
+    note right of sys
+      Available operations:
+        - createFlightPlan       (US080)
+        - createFlightPlanFromDSL (US081)
+        - insertWeatherData      (US082)
+        - validateFlightPlan     (US085)
+        - listFlights            (read-only)
+        - listWeather            (read-only)
+    end note
+    sys --> P : operationResult
+    deactivate sys
+end
+
+P -> sys : logout()
+activate sys
+sys --> P : session ended
+deactivate sys
+
+deactivate P
+
+@enduml

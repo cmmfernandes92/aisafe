@@ -1,0 +1,10 @@
+<tbody th:fragment="rows(companies)" id="companies-tbody">
+  <tr th:each="company : ${companies}">
+    <td class="mono" th:text="${company.iataCode()}">TP</td>
+    <td class="mono" th:text="${company.icaoCode()}">TAP</td>
+    <td th:text="${company.name()}">TAP Air Portugal</td>
+  </tr>
+  <tr th:if="${#lists.isEmpty(companies)}">
+    <td colspan="3" class="empty">No air transport companies registered.</td>
+  </tr>
+</tbody>

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AISafe - Routes Map</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260605-atcc-routes">
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar('dashboard', ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">US052 &middot; US073</p>
+          <h1>Routes &amp; Airports Map</h1>
+          <p class="page-copy">Interactive view of registered airports, air control areas, and active flight routes. Click a route in the panel to focus it on the map.</p>
+        </div>
+      </header>
+
+      <section class="card map-card">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">Tactical View</p>
+            <h2>Airports, Areas &amp; Flight Routes</h2>
+          </div>
+          <span>
+            <i class="legend-box"></i>Area
+            <i class="legend-dot"></i>Airport
+            <i style="display:inline-block;width:18px;height:2px;background:var(--purple);vertical-align:3px;margin:0 3px 0 12px;border-radius:1px;"></i>Route
+          </span>
+        </div>
+        <div class="map-shell">
+          <div class="map-wrap">
+            <div id="routes-map"></div>
+            <div class="zoom-tier">
+              <span>Detail</span>
+              <button id="zoom-tier-overview" data-zoom="4">Overview</button>
+              <button id="zoom-tier-areas" data-zoom="5">Areas</button>
+              <button id="zoom-tier-airports" data-zoom="7">Airports</button>
+            </div>
+          </div>
+          <aside class="map-panel">
+            <div id="route-filter-bar" class="route-filter-bar"></div>
+            <header>Active Routes <span id="route-count" style="opacity:0.5;font-weight:400;"></span></header>
+            <div id="route-list" class="route-list-scroll"></div>
+          </aside>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script th:inline="javascript">
+    window.AISAFE_AREAS    = /*[[${snapshot.areas()}]]*/ [];
+    window.AISAFE_AIRPORTS = /*[[${snapshot.airports()}]]*/ [];
+    window.AISAFE_ROUTES   = /*[[${snapshot.routes()}]]*/ [];
+  </script>
+  <script src="/js/sidebar.js?v=20260605-atcc-routes"></script>
+  <script src="/js/routes-map.js?v=20260605-atcc-routes"></script>
+</body>
+</html>

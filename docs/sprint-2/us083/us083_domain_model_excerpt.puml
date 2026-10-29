@@ -1,0 +1,116 @@
+@startuml flight-domain-excerpt-for-us083
+title Team Domain Model — Excerpt Relevant to US083 (Flight DSL)
+caption Subset extracted from the project's main domain model.\nShows only the aggregates the DSL parser produces or references.
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor      #5B9BD5
+skinparam packageStyle           rectangle
+skinparam packageBorderColor     #888888
+skinparam defaultFontSize        11
+hide empty members
+left to right direction
+
+' ============================================================
+' Flight Aggregate — the DSL produces a FlightPlan with its legs
+' and segments, attached to a Flight identified by its designator.
+' ============================================================
+package "Flight Aggregate" {
+    class Flight <<aggregate root>>
+    class FlightDesignator <<value object>>
+    abstract class Departure <<value object>>
+    class CharterDeparture <<value object>>
+    class RegularDeparture <<value object>>
+
+    class FlightPlan <<entity>> {
+        flightPlanID
+    }
+    class FlightLeg <<entity>>
+    class DepartureInfo <<value object>>
+    class ArrivalInfo <<value object>>
+    class FuelLoad <<value object>>
+    class FlightSegment <<entity>>
+    class Waypoint <<value object>>
+    class Coordinates <<value object>>
+    class AltitudeSlot <<value object>>
+    class WindDirection <<value object>>
+    class WindSpeed <<value object>>
+    enum FlightPlanStatus <<enum>> {
+        DRAFT
+        VALID
+    }
+
+    CharterDeparture --|> Departure
+    RegularDeparture --|> Departure
+
+    Flight *-- FlightDesignator
+    Flight *-- Departure
+    Flight *-- "1..*" FlightPlan
+
+    FlightPlan *-- FlightPlanStatus
+    FlightPlan *-- "1..*" FlightLeg
+
+    FlightLeg *-- DepartureInfo
+    FlightLeg *-- ArrivalInfo
+    FlightLeg *-- FuelLoad
+    FlightLeg *-- "1..*" FlightSegment
+
+    FlightSegment *-- "2" Waypoint : start, end
+    FlightSegment *-- "1..*" AltitudeSlot
+    FlightSegment *-- WindDirection
+    FlightSegment *-- WindSpeed
+
+    Waypoint *-- Coordinates
+}
+
+' ============================================================
+' Airport Aggregate — referenced by departures/arrivals
+' ============================================================
+package "Airport Aggregate" {
+    class Airport <<aggregate root>>
+    class AirportIATACode <<value object>>
+    class AirportICAOCode <<value object>>
+
+    Airport *-- AirportIATACode
+    Airport *-- AirportICAOCode
+}
+
+' ============================================================
+' FlightRoute Aggregate — referenced at flight level
+' ============================================================
+package "FlightRoute Aggregate" {
+    class FlightRoute <<aggregate root>>
+    class RouteName <<value object>>
+
+    FlightRoute *-- RouteName
+}
+
+' ============================================================
+' Cross-aggregate references used by the DSL
+' ============================================================
+Flight         --> FlightRoute     : for route
+DepartureInfo  --> Airport         : from
+ArrivalInfo    --> Airport         : to
+FlightRoute    --> "2" Airport     : origin, destination
+
+' ============================================================
+' Mapping note for US083 → US081
+' ============================================================
+note as MappingNote
+  **What US083 produces vs what US081 maps to**
+
+  The DSL file is a description of a **FlightPlan**.
+  The surrounding **Flight** (with its FlightDesignator,
+  Departure subclass, Aircraft, Pilot, Route) is assumed
+  to exist already — created via US080.
+
+  At import time (US081):
+   • FlightDesignator from DSL → look up existing Flight
+   • DSL type (regular/charter) → must agree with Flight's
+     Departure subtype
+   • DSL legs/segments → new FlightPlan instance with
+     status = DRAFT
+end note
+
+MappingNote .. FlightPlan
+@enduml

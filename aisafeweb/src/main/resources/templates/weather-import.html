@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AISafe - Import Weather Data</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260603-weather">
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar('import-bulk-data', ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Weather Service</p>
+          <h1>Import Bulk Weather Data</h1>
+          <p class="page-copy">Import weather from a CSV file or directly from the Open-Meteo API. The reader Strategy, transaction, and row validation are all provided by AISafe core.</p>
+        </div>
+      </header>
+
+      <section class="areas-grid">
+        <article th:replace="~{fragments/table-card :: card(
+            'Weather Data',
+            '/modules/weather-service/weather-data/table',
+            '#weather-data-tbody',
+            'Refresh weather data',
+            ~{::#weather-data-head},
+            ~{fragments/weather-data :: rows(${snapshot.weatherData()})})}">
+          <thead id="weather-data-head">
+          <tr>
+            <th>Area</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Zone</th>
+            <th>Altitude</th>
+            <th>Wind</th>
+            <th>Source</th>
+          </tr>
+          </thead>
+        </article>
+
+        <aside class="card form-card">
+          <div class="card-head">
+            <h2>Import Weather Data</h2>
+          </div>
+          <div id="form-result"></div>
+          <form id="import-form" hx-post="/modules/weather-service/import-bulk-weather-data" hx-target="#form-result" hx-swap="innerHTML" class="stack">
+            <input type="hidden" name="source" id="import-source" value="">
+            <label>
+              <span>Air Control Area</span>
+              <select name="areaCode" required hx-get="/modules/weather-service/check-area" hx-trigger="change" hx-target="#area-feedback" hx-swap="innerHTML">
+                <option value="">Select area</option>
+                <option th:each="area : ${snapshot.areas()}" th:value="${area.code()}" th:text="|${area.code()} - ${area.name()}|">LPPC - Lisbon ACC</option>
+              </select>
+              <div id="area-feedback"></div>
+            </label>
+
+            <div class="source-choice">
+              <button type="button" class="source-option" data-source="csv">
+                <svg class="source-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
+                  <path d="M14 3v5h5"/>
+                  <path d="M8 13h3M8 16h4M13 16h3"/>
+                </svg>
+                <span class="source-label">Import from CSV File</span>
+              </button>
+              <button type="button" class="source-option" data-source="open-meteo">
+                <svg class="openmeteo-mark" viewBox="0 0 48 34" fill="none" aria-hidden="true">
+                  <g stroke="#FBBF24" stroke-width="1.7" stroke-linecap="round">
+                    <line x1="14" y1="3" x2="14" y2="6.5"/>
+                    <line x1="5.2" y1="6.2" x2="7.7" y2="8.7"/>
+                    <line x1="2" y1="15" x2="5.5" y2="15"/>
+                    <line x1="5.2" y1="23.8" x2="7.7" y2="21.3"/>
+                    <line x1="22.8" y1="6.2" x2="20.3" y2="8.7"/>
+                  </g>
+                  <circle cx="14" cy="15" r="6.5" fill="#FBBF24"/>
+                  <g fill="#FFFFFF">
+                    <circle cx="24" cy="24" r="5.5"/>
+                    <circle cx="31" cy="20.5" r="7.5"/>
+                    <circle cx="38" cy="24" r="5.5"/>
+                    <rect x="24" y="24" width="16.5" height="7.5" rx="3.75"/>
+                  </g>
+                </svg>
+                <span class="source-label">Import from Open-Meteo</span>
+              </button>
+            </div>
+
+            <div id="import-config" hidden class="stack">
+              <label>
+                <span>Data Source</span>
+                <input name="dataSource" id="import-data-source" maxlength="80" placeholder="NOAA / IPMA / METAR Provider" required disabled>
+              </label>
+
+              <div id="csv-section" class="import-section" hidden>
+                <div class="csv-tools">
+                  <div id="csv-drop-zone" class="csv-drop-zone" role="button" tabindex="0">
+                    <strong>Drop CSV file here</strong>
+                    <span>or paste contents below.</span>
+                  </div>
+                  <div class="csv-toolbar">
+                    <button type="button" id="paste-csv-button">Paste from clipboard</button>
+                    <span id="csv-row-count" class="field-note">0 data rows</span>
+                  </div>
+                </div>
+                <label>
+                  <span>CSV Content</span>
+                  <textarea id="csv-content" name="csvContent" required disabled spellcheck="false" class="mono" placeholder="SW Lat,SW Lon,NE Lat,NE Lon,Alt_inf (ft),Alt_Sup (ft),Direction (degree),Value (knot),Day,Star,End&#10;38.5,-9.5,39.1,-8.8,0,12000,270,18,2026-06-03,10:00,11:00"></textarea>
+                </label>
+              </div>
+
+              <div id="open-meteo-section" class="import-section" hidden>
+                <p class="field-note">Open-Meteo grids the selected area and samples each cell at the chosen day and time window.</p>
+                <label>
+                  <span>Day</span>
+                  <input type="date" name="day" id="om-day" required disabled>
+                </label>
+                <div class="field-row">
+                  <label>
+                    <span>Start time</span>
+                    <input type="time" name="startTime" id="om-start" required disabled>
+                  </label>
+                  <label>
+                    <span>End time</span>
+                    <input type="time" name="endTime" id="om-end" required disabled>
+                  </label>
+                </div>
+              </div>
+
+              <button type="submit" id="import-submit" hidden>Import Weather Data</button>
+            </div>
+          </form>
+        </aside>
+      </section>
+    </main>
+  </div>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/sortable-table.js"></script>
+  <script src="/js/weather-import.js?v=20260608-sources2"></script>
+</body>
+</html>

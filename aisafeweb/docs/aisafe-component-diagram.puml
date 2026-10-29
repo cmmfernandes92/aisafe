@@ -1,0 +1,69 @@
+@startuml
+' Maroon outline on light-blue fill
+skinparam shadowing false
+skinparam componentStyle uml2
+skinparam component {
+  BackgroundColor #CFE2F3
+  BorderColor #7B241C
+  FontColor #1A2B3C
+}
+skinparam interface {
+  BackgroundColor #CFE2F3
+  BorderColor #7B241C
+  FontColor #1A2B3C
+}
+skinparam control {
+  BackgroundColor #CFE2F3
+  BorderColor #7B241C
+  FontColor #1A2B3C
+}
+skinparam database {
+  BackgroundColor #CFE2F3
+  BorderColor #7B241C
+  FontColor #1A2B3C
+}
+skinparam ArrowColor #7B241C
+skinparam noteBorderColor #7B241C
+skinparam noteBackgroundColor #EAF2FB
+
+' --- Adapters (top) ---
+component "aisafe.app.*.console\n<<Console Adapter>>" as Console
+component "aisafeweb\n<<Web Adapter (Spring Boot)>>" as Web
+
+' --- Application-layer port (controller = Jacobson control symbol) ---
+control "Use-Case Controllers\n(application-layer port)" as UC
+
+' --- Core (middle) ---
+component "aisafe.core\n<<Application + Domain>>" as Core
+
+' --- Outbound ports + implementations (bottom) ---
+interface "Repository\nInterfaces" as Repo
+'interface "AuthzRegistry" as Authz
+component "aisafe.persistence.impl\n<<JPA RepositoryFactory>>" as Persistence
+database "H2\n(unit: eapli.aisafe)" as H2
+
+' Inbound: both adapters drive the same port; core provides it
+Console ..> UC : uses
+Web ..> UC : uses
+UC -down- Core
+
+' Outbound: core declares, persistence implements (DIP)
+Core -right- Repo
+'Core -down- Authz
+Repo <.. Persistence : implements
+Persistence --> H2
+
+' Web reuses the same authz (servlet-session re-auth)
+'Web ..> Authz
+
+'note right of Web
+'  Spring DataSource / JPA / Security
+'  auto-config explicitly DISABLED.
+'  Web owns HTTP only, never the core.
+'end note
+
+'note left of Core
+'  Dependencies point inward (DIP, T5 s.21-24).
+'  Core depends on no UI framework.
+'end note
+@enduml

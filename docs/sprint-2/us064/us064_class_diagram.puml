@@ -1,0 +1,134 @@
+@startuml us064_class_diagram
+title US064 - Disable a Customer's Collaborator Class Diagram
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>> #95A5A6
+    FontColor<<external>> #1A1A1A
+}
+
+' ============================================
+' PRESENTATION (aisafe.app.backoffice.console)
+' ============================================
+package "Presentation" {
+    class DisableCollaboratorUI {
+        + doShow() : boolean
+        + headline() : String
+    }
+}
+
+' ============================================
+' APPLICATION (aisafe.core)
+' ============================================
+package "Application" {
+    class DisableCollaboratorController <<UseCaseController>> {
+        + activeCollaboratorsOf(CompanyIATACode) : Iterable<CompanyCollaborator>
+        + disableCollaborator(collaboratorEmail : String) : Collaborator
+    }
+    note right of DisableCollaboratorController
+        disableCollaborator():
+        1. collaborator.disable()  → sets DISABLED (CC3)
+        2. userSvc.deactivateUser() → blocks authentication (AC2)
+    end note
+}
+
+' ============================================
+' DOMAIN (aisafe.core)
+' ============================================
+package "Domain" {
+    abstract class Collaborator <<aggregate root>> {
+        + identity() : Email
+        + status() : CollaboratorStatus
+        + isActive() : boolean
+        + disable() : void
+    }
+    note right of Collaborator
+        disable() enforces:
+        - status must be ACTIVE (idempotency guard)
+        - throws IllegalStateException if already DISABLED
+    end note
+
+    class CompanyCollaborator {
+        + companyCode() : CompanyIATACode
+    }
+
+    enum CollaboratorStatus <<enum>> {
+        ACTIVE
+        DISABLED
+    }
+
+    class Email <<value object>>
+
+    class User <<aggregate root>><<external>> {
+        + systemUser() : SystemUser
+    }
+
+    class SystemUser <<external>>
+
+    interface CollaboratorRepository {
+        + ofIdentity(Email) : Optional<Collaborator>
+        + findAllActiveByCompanyCode(CompanyIATACode) : Iterable<CompanyCollaborator>
+        + save(Collaborator) : Collaborator
+    }
+    note right of CollaboratorRepository
+        CC3: findAllActiveByCompanyCode()
+        filters status = ACTIVE at DB level
+        (JPQL), never in Java code.
+    end note
+
+    interface UserRepository <<external>> {
+        + ofIdentity(Email) : Optional<User>
+    }
+
+    class CompanyIATACode <<value object>><<external>>
+}
+
+' ============================================
+' FRAMEWORK (eapli.framework.infrastructure.authz)
+' ============================================
+package "Framework" {
+    class UserManagementService <<external>> {
+        + deactivateUser(SystemUser) : SystemUser
+    }
+}
+
+' ============================================
+' PERSISTENCE (aisafe.persistence.impl)
+' ============================================
+package "Persistence" {
+    class JpaCollaboratorRepository
+    class InMemoryCollaboratorRepository
+}
+
+' ============================================
+' Relationships
+' ============================================
+DisableCollaboratorUI ..> DisableCollaboratorController : uses
+
+DisableCollaboratorController ..> CollaboratorRepository : loads & saves
+DisableCollaboratorController ..> UserRepository : loads user
+DisableCollaboratorController ..> Collaborator : calls disable()
+DisableCollaboratorController ..> UserManagementService : deactivates SystemUser
+DisableCollaboratorController ..> CompanyIATACode : filters by
+
+CompanyCollaborator --|> Collaborator
+Collaborator *-- CollaboratorStatus
+Collaborator *-- Email : @EmbeddedId (identity)
+Collaborator ..> User : identified by Email
+
+User *-- SystemUser
+
+JpaCollaboratorRepository ..|> CollaboratorRepository
+InMemoryCollaboratorRepository ..|> CollaboratorRepository
+
+@enduml

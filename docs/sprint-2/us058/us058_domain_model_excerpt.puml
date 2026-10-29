@@ -1,0 +1,54 @@
+@startuml us058_domain_model_excerpt
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+skinparam noteBackgroundColor #FFF8DC
+skinparam noteBorderColor #B8860B
+hide empty members
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>> #95A5A6
+    FontColor<<external>> #1A1A1A
+}
+
+package "AircraftModel Aggregate" {
+    class AircraftModel <<aggregate root>> {
+        + removeCertifiedEngine(EngineModel) : void
+        + addCertifiedEngine(EngineModel) : void
+        + certifiedEngines() : Set<EngineModel>
+    }
+    note right of AircraftModel
+        Invariants enforced by removeCertifiedEngine():
+        - A2: must retain at least one certified engine
+        - Engine must currently be in certified list
+        - Engine must not be null
+        Cross-aggregate (controller, not domain):
+        - AC4: no live Aircraft may use this engine
+          (TODO: pending US070 Aircraft aggregate)
+    end note
+}
+
+package "EngineModel Aggregate" {
+    class EngineModel <<aggregate root>> {
+        + engineModelName() : EngineModelName
+        + motorizationType() : MotorizationType
+        + sameAs(Object) : boolean
+    }
+}
+
+' External aggregate — not modified by this US
+class Aircraft <<aggregate root>><<external>> {
+    + engineModel() : EngineModel
+}
+
+AircraftModel --> "1..*" EngineModel : certifiedEngines
+Aircraft --> AircraftModel : isOfModel <<external>>
+Aircraft --> EngineModel : uses <<external>>
+
+@enduml

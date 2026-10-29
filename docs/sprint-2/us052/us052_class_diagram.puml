@@ -1,0 +1,162 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>> #95A5A6
+    FontColor<<external>> #1A1A1A
+}
+
+' ============================================
+' PRESENTATION (aisafe.app.backoffice.console)
+' ============================================
+package "Presentation" {
+    class MainMenu <<external>> {
+        + buildMainMenu()
+    }
+    class RegisterAirportAction {
+        + execute() : boolean
+    }
+    class RegisterAirportUI {
+        + doShow() : boolean
+    }
+}
+
+' ============================================
+' APPLICATION (aisafe.core)
+' ============================================
+package "Application" {
+    class RegisterAirportController <<UseCaseController>> {
+        + registerAirport(icao, iata, name, town, elevation, lat, lon, areaCode, countryCode) : Airport
+    }
+}
+
+' ============================================
+' DOMAIN (aisafe.core)
+' ============================================
+package "Domain" {
+
+    ' --- Airport aggregate (new in US052) ---
+    class Airport <<aggregate root>> {
+        + identity() : AirportICAOCode
+        + iata() : AirportIATACode
+        + name() : AirportName
+        + town() : Town
+        + elevation() : Elevation
+        + coordinates() : Coordinates
+    }
+    class AirportICAOCode <<value object>>
+    class AirportIATACode <<value object>>
+    class AirportName <<value object>>
+    class Town <<value object>>
+    class Elevation <<value object>>
+
+    ' --- Country aggregate (new in US052) ---
+    class Country <<aggregate root>> {
+        + identity() : CountryCode
+        + name() : CountryName
+    }
+    class CountryCode <<value object>>
+    class CountryName <<value object>>
+
+    ' --- AirControlArea aggregate (external, from US050) ---
+    class AirControlArea <<aggregate root>><<external>> {
+        + boundary() : GeographicBoundary
+    }
+    class GeographicBoundary <<value object>><<external>> {
+        + contains(Coordinates) : boolean
+    }
+    class Coordinates <<value object>><<external>>
+
+    ' --- Repositories ---
+    interface AirportRepository {
+        + findByICAO(AirportICAOCode) : Optional<Airport>
+        + findByIATA(AirportIATACode) : Optional<Airport>
+        + save(Airport) : Airport
+    }
+    interface CountryRepository {
+        + findByCode(CountryCode) : Optional<Country>
+        + findAll() : Iterable<Country>
+        + save(Country) : Country
+    }
+    interface AirControlAreaRepository <<external>> {
+        + findByCode(AreaCode) : Optional<AirControlArea>
+    }
+}
+
+' ============================================
+' PERSISTENCE (aisafe.persistence.impl)
+' ============================================
+package "Persistence" {
+    class InMemoryAirportRepository
+    class JpaAirportRepository
+    class InMemoryCountryRepository
+    class JpaCountryRepository
+}
+
+' ============================================
+' BOOTSTRAP (aisafe.bootstrappers)
+' ============================================
+package "Bootstrap" {
+    class CountryBootstrapper {
+        + execute() : boolean
+    }
+    class AirportBootstrapper {
+        + execute() : boolean
+    }
+}
+
+' ============================================
+' Relationships
+' ============================================
+
+' Presentation wiring
+MainMenu --> RegisterAirportAction : registers
+RegisterAirportAction ..> RegisterAirportUI : invokes
+RegisterAirportUI ..> RegisterAirportController : uses
+
+' Controller dependencies
+RegisterAirportController ..> AirportRepository : uses
+RegisterAirportController ..> CountryRepository : uses
+RegisterAirportController ..> AirControlAreaRepository : uses
+RegisterAirportController ..> Airport : creates
+
+' Airport aggregate composition
+Airport *-- AirportICAOCode
+Airport *-- AirportIATACode
+Airport *-- AirportName
+Airport *-- Town
+Airport *-- Elevation
+Airport *-- Coordinates : reuses (US050)
+
+' Airport cross-aggregate references
+Airport --> AirControlArea : located in area
+Airport --> Country : located in country
+
+' Country aggregate composition
+Country *-- CountryCode
+Country *-- CountryName
+
+' AirControlArea aggregate composition (external, shown for context)
+AirControlArea *-- GeographicBoundary
+GeographicBoundary *-- "2" Coordinates : SW, NE
+
+' Persistence
+InMemoryAirportRepository ..|> AirportRepository
+JpaAirportRepository ..|> AirportRepository
+InMemoryCountryRepository ..|> CountryRepository
+JpaCountryRepository ..|> CountryRepository
+
+' Bootstrap wiring
+CountryBootstrapper ..> CountryRepository : uses
+AirportBootstrapper ..> RegisterAirportController : uses
+
+@enduml

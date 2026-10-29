@@ -1,0 +1,80 @@
+@startuml
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+autonumber
+title Register Airport
+
+actor "Backoffice Operator" as BO
+participant ":AirportUI" as UI <<presentation>>
+participant ":RegisterAirportController" as C <<application>>
+participant ":AirControlAreaRepository" as ACARepo <<persistence>>
+participant ":AirportRepository" as Repo <<persistence>>
+participant ":AirportICAOCode" as ICAO <<domain>>
+participant ":AirportIATACode" as IATA <<domain>>
+participant ":AirportCoordinates" as COORD <<domain>>
+participant ":Elevation" as ELEV <<domain>>
+participant ":Airport" as AP <<domain>>
+
+activate BO
+BO -> UI : asks to register\nan airport
+activate UI
+UI --> BO : requests airport data
+deactivate UI
+
+BO -> UI : enters name, town, country,\niataCode, icaoCode, coordinates,\nelevation, airControlAreaCode
+activate UI
+UI -> C : registerAirport(...)
+activate C
+
+C -> ACARepo : contains(airControlAreaCode)
+activate ACARepo
+ACARepo --> C : true
+deactivate ACARepo
+
+C -> ICAO ** : valueOf(icaoCode)
+note right of ICAO
+  Validates (Information Expert):
+  - icaoCode format is valid
+end note
+
+C -> Repo : containsICAO(icaoVO)
+activate Repo
+Repo --> C : false
+deactivate Repo
+
+C -> IATA ** : valueOf(iataCode)
+note right of IATA
+  Validates (Information Expert):
+  - iataCode format is valid
+end note
+
+C -> Repo : containsIATA(iataVO)
+activate Repo
+Repo --> C : false
+deactivate Repo
+
+C -> COORD ** : valueOf(coordinates)
+note right of COORD
+  Validates (Information Expert):
+  - coordinates are valid
+end note
+
+C -> ELEV ** : valueOf(elevation)
+note right of ELEV
+  Validates (Information Expert):
+  - meters above sea level are valid
+end note
+
+C -> AP ** : create(name, town, country, icaoVO,\niataVO, coordinatesVO, elevationVO,\nairControlAreaCode)
+
+C -> Repo : save(airport)
+activate Repo
+Repo --> C : airport
+deactivate Repo
+
+C --> UI : airport
+deactivate C
+UI --> BO : shows successful registration
+deactivate UI
+deactivate BO
+@enduml

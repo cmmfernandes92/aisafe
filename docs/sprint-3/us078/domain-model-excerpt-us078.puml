@@ -1,0 +1,44 @@
+@startuml domain-model-excerpt-us078
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 13
+skinparam roundcorner 8
+skinparam classBackgroundColor #FEFEFE
+skinparam classBorderColor #AAAAAA
+
+note as N
+  US078 adds no new domain concepts.
+  It provides a TCP transport layer that
+  exposes the existing ATCC domain
+  to remote clients.
+  The sole EAPLI design addition is
+  AircraftDTO, introduced to decouple
+  the list-fleet response from the
+  domain aggregate (per DTO pattern).
+end note
+
+class "SystemUser\n(ATCC role)" as User <<Aggregate Root>> #DDDDDD {
+    - identity : Username
+    - roles : Set<Role>
+}
+
+class "AtccConnectionHandler\n(TCP Infrastructure)" as H #EEEEEE {
+    authenticates as ATCC
+    dispatches commands
+}
+
+class "ATCC Domain\n(Aircraft, FlightRoute,\nPilot, AircraftModel...)" as Domain <<existing>> #DDDDDD {
+}
+
+class "AircraftDTO\n(new)" as DTO #FFFACD {
+    + registration : String
+    + modelName : String
+    + status : String
+    + capacity : int
+}
+
+User --> H : "authenticated session"
+H --> Domain : "delegates to existing\napplication controllers"
+H ..> DTO : "produces for LIST_FLEET\n(no domain object crosses wire)"
+
+@enduml

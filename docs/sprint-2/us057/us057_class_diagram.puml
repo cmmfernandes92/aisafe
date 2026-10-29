@@ -1,0 +1,93 @@
+@startuml us057-implementation
+title US057 - Add Engine Model to Aircraft Model Class Diagram
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>> #95A5A6
+    FontColor<<external>> #1A1A1A
+}
+
+' ============================================
+' PRESENTATION
+' ============================================
+package "Presentation" {
+    class AddEngineToAircraftModelUI {
+        + doShow() : boolean
+        + headline() : String
+    }
+}
+
+' ============================================
+' APPLICATION
+' ============================================
+package "Application" {
+    class AddEngineToAircraftModelController <<UseCaseController>> {
+        + addEngine(aircraftModelName, engineModelName) : AircraftModel
+        + listAircraftModels() : Iterable<AircraftModel>
+        + listCompatibleEngines(AircraftModel) : Iterable<EngineModel>
+    }
+}
+
+' ============================================
+' DOMAIN
+' ============================================
+package "Domain" {
+    class AircraftModel <<aggregate root>> {
+        + addCertifiedEngine(EngineModel) : void
+        + certifiedEngines() : Set<EngineModel>
+        + motorizationType() : MotorizationType
+    }
+    note right of AircraftModel
+        addCertifiedEngine() enforces:
+        - motorization type compatibility
+        - duplicate exclusion
+    end note
+    class EngineModel <<aggregate root>> {
+        + motorizationType() : MotorizationType
+    }
+    interface AircraftModelRepository {
+        + findByIdentity(AircraftModelName) : Optional<AircraftModel>
+        + save(AircraftModel) : AircraftModel
+    }
+    interface EngineModelRepository {
+        + findByIdentity(EngineModelName) : Optional<EngineModel>
+    }
+}
+
+' ============================================
+' PERSISTENCE
+' ============================================
+package "Persistence" {
+    class JpaAircraftModelRepository
+    class InMemoryAircraftModelRepository
+    class JpaEngineModelRepository
+    class InMemoryEngineModelRepository
+}
+
+' ============================================
+' Relationships
+' ============================================
+AddEngineToAircraftModelUI ..> AddEngineToAircraftModelController : uses
+
+AddEngineToAircraftModelController ..> AircraftModelRepository : loads & saves
+AddEngineToAircraftModelController ..> EngineModelRepository : queries
+AddEngineToAircraftModelController ..> AircraftModel : calls addCertifiedEngine()
+
+AircraftModel --> EngineModel : certifiedEngines 1..*
+
+JpaAircraftModelRepository ..|> AircraftModelRepository
+InMemoryAircraftModelRepository ..|> AircraftModelRepository
+JpaEngineModelRepository ..|> EngineModelRepository
+InMemoryEngineModelRepository ..|> EngineModelRepository
+
+@enduml

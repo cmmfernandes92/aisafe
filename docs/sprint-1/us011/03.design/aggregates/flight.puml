@@ -1,0 +1,82 @@
+@startuml
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+
+package "Flight Aggregate" {
+    class Flight <<aggregate root>>
+    class FlightDesignator <<value object>>
+    abstract class Departure <<value object>>
+    class CharterDeparture <<value object>> {
+        departureDate
+        departureTime
+    }
+    class RegularDeparture <<value object>>
+    class WeekdaySchedule <<value object>> {
+        weekday
+    }
+    class DepartureTime <<value object>>
+    class FlightPlan <<entity>> {
+        flightPlanID
+    }
+    class FlightLeg <<entity>>
+    class DepartureInfo <<value object>>
+    class ArrivalInfo <<value object>>
+    class FuelLoad <<value object>>
+    class FlightSegment <<entity>>
+    class Waypoint <<value object>>
+    class Coordinates <<value object>>
+    class AltitudeSlot <<value object>>
+    class WindDirection <<value object>>
+    class WindSpeed <<value object>>
+    enum FlightPlanStatus <<enum>> {
+        DRAFT
+        VALID
+    }
+
+    CharterDeparture --|> Departure
+    RegularDeparture --|> Departure
+    Flight *-- FlightDesignator
+    Flight *-- Departure
+    RegularDeparture *-- "1..*" WeekdaySchedule
+    WeekdaySchedule *-- "1..*" DepartureTime
+
+    Flight *-- "1..*" FlightPlan
+    FlightPlan *-- FlightPlanStatus
+    FlightPlan *-- "1..*" FlightLeg
+
+    FlightLeg *-- DepartureInfo
+    FlightLeg *-- ArrivalInfo
+    FlightLeg *-- FuelLoad
+    FlightLeg *-- "1..*" FlightSegment
+
+    FlightSegment *-- "2" Waypoint : start, end
+    FlightSegment *-- "1..*" AltitudeSlot
+    FlightSegment *-- WindDirection
+    FlightSegment *-- WindSpeed
+
+    Waypoint *-- Coordinates
+}
+
+' Cross-aggregate references
+class FlightRoute <<aggregate root>> #White
+class Aircraft <<aggregate root>> #White
+class Pilot <<aggregate root>> #White
+class AirTransportCompany <<aggregate root>> #White
+class Airport <<aggregate root>> #White
+
+Flight --> FlightRoute : for route
+Flight --> Aircraft : uses
+Flight --> Pilot : assigned to
+Flight --> AirTransportCompany : belongs to
+DepartureInfo --> Airport : from
+ArrivalInfo --> Airport : to
+
+@enduml

@@ -1,0 +1,119 @@
+@startuml sd-us082
+skinparam actorStyle awesome
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+autonumber
+
+title US082 - Attach Weather to Flight Plan (realization)
+
+actor "Pilot" as A
+participant ":AttachWeatherToPlanUI" as UI <<presentation>>
+participant ":FlightRepository" as FR <<persistence>>
+participant ":ConsoleFlightPlanCompiler" as COMP <<presentation>>
+participant ":WeatherDataRepository" as WR <<persistence>>
+participant ":AttachWeatherToPlanController" as CTRL <<application>>
+participant ":AuthorizationService" as AUTH <<infrastructure>>
+participant "flight:Flight" as F <<domain>>
+participant "plan:FlightPlan" as P <<domain>>
+
+activate A
+
+A -> UI : show()
+activate UI
+
+UI -> FR : ofIdentity(flightId)
+activate FR
+FR --> UI : flight
+deactivate FR
+
+UI -> F : currentPlan()
+activate F
+F --> UI : plan
+deactivate F
+
+UI -> P : rawDslContent()
+activate P
+P --> UI : raw DSL
+deactivate P
+
+UI -> COMP : compile(rawDslContent)
+activate COMP
+COMP --> UI : parsed segments
+deactivate COMP
+
+UI -> WR : findAll()
+activate WR
+WR --> UI : registered forecasts
+deactivate WR
+
+A -> UI : select segment/forecast assignments
+
+UI -> CTRL : attachWeather(flightId, weatherMap)
+activate CTRL
+
+CTRL -> AUTH : ensureAuthenticatedUserHasAnyOf(PILOT)
+activate AUTH
+AUTH --> CTRL : ok
+deactivate AUTH
+
+CTRL -> FR : ofIdentity(flightId)
+activate FR
+FR --> CTRL : flight
+deactivate FR
+
+CTRL -> AUTH : session()
+activate AUTH
+AUTH --> CTRL : authenticated user
+deactivate AUTH
+
+CTRL -> F : pilot()
+activate F
+F --> CTRL : pilot email
+deactivate F
+
+loop each selected WeatherDataId
+  CTRL -> WR : ofIdentity(weatherId)
+  activate WR
+  WR --> CTRL : Optional<WeatherData>
+  deactivate WR
+end
+note right of CTRL
+  The implementation validates that selected
+  weather ids exist. It does not perform
+  area/time relevance matching.
+end note
+
+alt validation fails (not owner or unknown weather id)
+  CTRL --> UI : error(message)
+  UI --> A : error(message)
+else request valid
+  CTRL -> F : attachWeatherToCurrentPlan(weatherMap)
+  activate F
+
+  F -> P : attachWeather(weatherMap)
+  activate P
+
+  alt plan status == TESTED
+    P -> P : status = VALIDATED
+  end
+
+  P --> F : updated plan
+  deactivate P
+
+  F --> CTRL : ok
+  deactivate F
+
+  CTRL -> FR : save(flight)
+  activate FR
+  FR --> CTRL : persisted
+  deactivate FR
+
+  CTRL --> UI : success
+  UI --> A : confirmation(success)
+end
+
+deactivate CTRL
+deactivate UI
+deactivate A
+
+@enduml

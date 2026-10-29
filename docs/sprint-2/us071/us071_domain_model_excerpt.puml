@@ -1,0 +1,81 @@
+@startuml us071_domain_model_excerpt
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+left to right direction
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>> #95A5A6
+    FontColor<<external>> #1A1A1A
+}
+
+' ============================================
+' AGGREGATE: Aircraft (modified by this US)
+' ============================================
+package "Aircraft Aggregate" {
+    class Aircraft <<aggregate root>> {
+        + decommission() : void
+        + status() : OperationalStatus
+    }
+    class Registration <<value object>>
+    enum OperationalStatus <<enum>> {
+        ACTIVE
+        RETIRED
+    }
+
+    Aircraft *-- Registration
+    Aircraft *-- OperationalStatus
+}
+
+' ============================================
+' EXTERNAL AGGREGATES (reference only, grey)
+' ============================================
+package "AirTransportCompany Aggregate" #EEEEEE {
+    class AirTransportCompany <<aggregate root>> <<external>>
+}
+
+package "CompanyCollaborator Aggregate" #EEEEEE {
+    class CompanyCollaborator <<aggregate root>> <<external>>
+}
+
+package "Flight Aggregate\n(future sprint)" #EEEEEE {
+    class Flight <<aggregate root>> <<external>>
+    class FlightPlan <<entity>> <<external>>
+    enum FlightPlanStatus <<enum>> <<external>> {
+        DRAFT
+        VALIDATED
+        TESTED
+    }
+
+    Flight *-- FlightPlan
+    FlightPlan *-- FlightPlanStatus
+}
+
+' ============================================
+' CROSS-AGGREGATE RELATIONSHIPS
+' ============================================
+Aircraft --> AirTransportCompany : belongs to
+
+CompanyCollaborator --> AirTransportCompany : belongs to
+note on link
+  Resolved from authenticated
+  session to determine which
+  company the actor represents
+end note
+
+Flight --> Aircraft : references
+note on link
+  Pending flights check:
+  FlightPlan status in
+  {DRAFT, VALIDATED, TESTED}
+end note
+
+@enduml

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<div th:fragment="form">
+  <!-- Recompile / ownership failure -->
+  <div th:if="${!plan.ok()}" class="alert error" role="status">
+    <strong>Cannot load segments</strong>
+    <ul class="weather-import-errors">
+      <li th:each="e : ${plan.errors()}" th:text="${e}">error</li>
+    </ul>
+  </div>
+
+  <!-- No snapshots registered yet -->
+  <p th:if="${plan.ok() and #lists.isEmpty(plan.snapshots())}" class="field-note error">
+    No weather snapshots are registered yet — register or import weather data first.
+  </p>
+
+  <!-- Snapshot-driven per-segment forecast form -->
+  <form th:if="${plan.ok() and !#lists.isEmpty(plan.snapshots())}"
+        hx-post="/modules/pilot-operations/add-weather-data"
+        hx-target="#form-result" hx-swap="innerHTML" class="stack">
+    <input type="hidden" name="flightKey" th:value="${plan.flightKey()}">
+
+    <label>
+      <span>Weather snapshot</span>
+      <select name="snapshotKey" required
+              hx-get="/modules/pilot-operations/add-weather-data/segments"
+              hx-target="#weather-slot" hx-swap="innerHTML"
+              hx-include="closest form">
+        <option value="">Select snapshot</option>
+        <option th:each="snapshot : ${plan.snapshots()}"
+                th:value="${snapshot.key()}"
+                th:selected="${snapshot.key() == plan.selectedSnapshotKey()}"
+                th:text="${snapshot.label()}">Open-Meteo · 2026-06-22 05:00 -> 07:30</option>
+      </select>
+    </label>
+
+    <p th:if="${!plan.hasSelectedSnapshot()}" class="field-note">
+      Pick one provider/period snapshot. AISafe will resolve each segment to the
+      forecast cell and altitude band that covers it.
+    </p>
+
+    <div th:if="${plan.hasSelectedSnapshot()}" class="stack">
+      <fieldset class="form-section" th:each="seg : ${plan.segments()}">
+        <legend class="mono" th:text="${seg.label()}">Leg 1 · Seg 0 · (...)</legend>
+
+        <input th:if="${seg.hasResolvedForecast()}" type="hidden"
+               th:name="${'forecast_' + seg.index()}"
+               th:value="${seg.resolvedForecast().id()}">
+        <p th:if="${seg.hasResolvedForecast()}" class="field-note ok"
+           th:text="|Resolved forecast: ${seg.resolvedForecast().label()}|">
+          Resolved forecast: LPPC · 0-36000 ft · wind 270 deg / 18.0 kt · OpenMeteo
+        </p>
+        <p th:if="${!seg.hasResolvedForecast()}" class="field-note error">
+          No coverage — DSL baseline wind is kept for this segment.
+        </p>
+      </fieldset>
+    </div>
+
+    <p th:if="${plan.hasSelectedSnapshot() and plan.resolvedCount() == 0}" class="field-note error">
+      No segment is covered by this snapshot. Choose another snapshot or import matching weather data.
+    </p>
+
+    <button th:if="${plan.hasSelectedSnapshot() and plan.resolvedCount() > 0}" type="submit">
+      Attach Resolved Weather
+    </button>
+  </form>
+</div>
+
+</body>
+</html>

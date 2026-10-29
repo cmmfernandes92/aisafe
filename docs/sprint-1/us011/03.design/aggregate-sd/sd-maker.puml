@@ -1,0 +1,57 @@
+@startuml
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+autonumber
+
+title Create Maker
+
+actor "Backoffice Operator" as BO
+participant ":MakerUI" as UI <<presentation>>
+participant ":CreateMakerController" as CTRL <<application>>
+participant ":MakerRepository" as MR <<persistence>>
+participant ":Maker" as M <<domain>>
+
+activate BO
+
+BO -> UI : asks to register\na maker
+activate UI
+
+UI -> CTRL : create()
+activate CTRL
+
+CTRL --> UI : maker types
+UI --> BO : shows maker types
+deactivate UI
+
+BO -> UI : enters maker data\nand selects maker type
+activate UI
+
+UI -> CTRL : createMaker(name, country, makerType)
+
+CTRL -> MR : existsByName(name)
+activate MR
+MR --> CTRL : false
+deactivate MR
+
+CTRL -> M ** : create(name, country, makerType)
+
+note right of M
+  Validates (Information Expert):
+  - name is valid
+  - country is valid
+  - maker type is valid
+end note
+
+CTRL -> MR : save(maker)
+activate MR
+MR --> CTRL : maker
+deactivate MR
+
+CTRL --> UI : maker
+deactivate CTRL
+
+UI --> BO : shows successful creation
+deactivate UI
+deactivate BO
+
+@enduml

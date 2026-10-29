@@ -1,0 +1,91 @@
+@startuml sd-us112
+skinparam actorStyle awesome
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+autonumber
+
+title US112 – Generate Monthly Statistics Report (realization)
+
+actor "Flight Control\nOperator" as A
+participant ":GenerateMonthlyReportUI" as UI <<presentation>>
+participant ":GenerateMonthlyReportController" as CTRL <<application>>
+participant ":AuthorizationService" as AUTH <<infrastructure>>
+participant ":MonthlyStatisticsRepository" as REPO <<persistence>>
+participant ":MonthlyReportGenerator" as GEN <<application>>
+
+activate A
+
+A -> UI : starts "Generate Monthly Statistics Report"
+activate UI
+UI --> A : prompt for year, month, output path
+deactivate UI
+
+A -> UI : year, month, outputPath
+activate UI
+
+UI -> CTRL : generate(period, outputPath)
+activate CTRL
+
+CTRL -> AUTH : ensureAuthenticatedUserHasAnyOf(FCO)
+activate AUTH
+AUTH --> CTRL : ok
+deactivate AUTH
+note right of CTRL : authz at the application layer
+
+CTRL -> REPO : countFlights(period)
+activate REPO
+REPO --> CTRL : int
+deactivate REPO
+
+CTRL -> REPO : countViolations(period)
+activate REPO
+REPO --> CTRL : int
+deactivate REPO
+
+CTRL -> REPO : countSimulations(period)
+activate REPO
+REPO --> CTRL : int
+deactivate REPO
+
+CTRL -> REPO : topRoutesByFlights(period, 10)
+activate REPO
+REPO --> CTRL : List<RouteUsageStat>
+deactivate REPO
+
+CTRL -> REPO : topCompaniesByFlights(period, 10)
+activate REPO
+REPO --> CTRL : List<CompanyFlightStat>
+deactivate REPO
+
+CTRL -> REPO : violationsByArea(period)
+activate REPO
+REPO --> CTRL : List<ViolationAreaStat>
+deactivate REPO
+
+CTRL -> REPO : monthlyEvolution(period, 6)
+activate REPO
+REPO --> CTRL : List<MonthlyEvolutionPoint>
+deactivate REPO
+
+CTRL -> CTRL : new MonthlyReportData(period, ...)
+note right of CTRL
+  Strategy (OCP): switching generator
+  changes format, not this method.
+end note
+
+CTRL -> GEN : generate(data, outputPath)
+activate GEN
+GEN -> GEN : buildHtml(data)
+GEN -> GEN : Files.writeString(outputPath, html)
+GEN --> CTRL : void
+deactivate GEN
+
+CTRL --> UI : void
+deactivate CTRL
+
+UI --> A : "Report saved to [outputPath]"
+deactivate UI
+
+deactivate A
+
+@enduml

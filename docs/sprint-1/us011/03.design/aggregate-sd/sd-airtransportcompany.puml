@@ -1,0 +1,71 @@
+@startuml
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+autonumber
+
+title Register Air Transport Company
+
+actor "Backoffice Operator" as BO
+participant ":AirTransportCompanyUI" as UI <<presentation>>
+participant ":CreateAirTransportCompanyController" as C <<application>>
+participant ":AirTransportCompanyRepository" as Repo <<persistence>>
+participant ":CompanyIATACode" as IATA <<domain>>
+participant ":CompanyICAOCode" as ICAO <<domain>>
+participant ":AirTransportCompany" as ATC <<domain>>
+
+activate BO
+
+BO -> UI : asks to register\nan air transport company
+activate UI
+UI --> BO : requests company data
+deactivate UI
+
+BO -> UI : enters companyName,\ncompanyIATACode,\ncompanyICAOCode
+activate UI
+UI -> C : createAirTransportCompany(companyName,\ncompanyIATACode, companyICAOCode)
+activate C
+
+C -> IATA ** : create(companyIATACode)
+note right of IATA
+  Validates (Information Expert):
+  - IATA code format is valid
+  - exactly 2 letters
+end note
+
+C -> Repo : containsIATACode(iataCodeVO)
+activate Repo
+Repo --> C : false
+deactivate Repo
+
+C -> ICAO ** : create(companyICAOCode)
+note right of ICAO
+  Validates (Information Expert):
+  - ICAO code format is valid
+  - 2 to 3 letters
+end note
+
+C -> Repo : containsICAOCode(icaoCodeVO)
+activate Repo
+Repo --> C : false
+deactivate Repo
+
+C -> ATC ** : create(companyName,\niataCodeVO, icaoCodeVO)
+note right of ATC
+  Validates (Information Expert):
+  - company name is valid
+  - company identity is consistent
+end note
+
+C -> Repo : save(airTransportCompany)
+activate Repo
+Repo --> C : airTransportCompany
+deactivate Repo
+
+C --> UI : airTransportCompany
+deactivate C
+
+UI --> BO : shows successful registration
+deactivate UI
+deactivate BO
+
+@enduml

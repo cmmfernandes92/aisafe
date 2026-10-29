@@ -1,0 +1,32 @@
+<tbody th:fragment="rows" id="routes-tbody">
+  <tr th:each="route : ${routes}">
+    <td class="mono" th:text="${route.routeName()}">TP101</td>
+    <td class="mono" th:text="${route.companyIata()}">TP</td>
+    <td th:text="${route.companyName()}">TAP Air Portugal</td>
+    <td class="mono" th:text="${route.originIata()}">LIS</td>
+    <td class="mono" th:text="${route.destinationIata()}">OPO</td>
+    <td th:text="${route.active() ? 'Active' : 'Inactive'}">Active</td>
+  </tr>
+  <tr th:if="${#lists.isEmpty(routes)}">
+    <td colspan="6" class="empty">No routes registered.</td>
+  </tr>
+</tbody>
+
+<th:block th:fragment="deactivate-result">
+  <div th:class="${success} ? 'alert ok' : 'alert error'" role="status">
+    <span th:text="${message}">Route updated.</span>
+  </div>
+  <tbody id="routes-tbody" hx-swap-oob="true">
+    <tr th:each="route : ${routes}">
+      <td class="mono" th:text="${route.routeName()}">TP101</td>
+      <td class="mono" th:text="${route.companyIata()}">TP</td>
+      <td th:text="${route.companyName()}">TAP Air Portugal</td>
+      <td class="mono" th:text="${route.originIata()}">LIS</td>
+      <td class="mono" th:text="${route.destinationIata()}">OPO</td>
+      <td th:text="${route.active() ? 'Active' : 'Inactive'}">Active</td>
+    </tr>
+    <tr th:if="${#lists.isEmpty(routes)}">
+      <td colspan="6" class="empty">No routes registered.</td>
+    </tr>
+  </tbody>
+</th:block>

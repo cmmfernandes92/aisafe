@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AISafe - Backoffice</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260605-atcc-routes">
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar('dashboard', ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Backoffice</p>
+          <h1>Reference Data Overview</h1>
+          <p class="page-copy">Live overview of the core operational catalogue: users, clearances, assessments, aircraft models, airports, and control areas.</p>
+        </div>
+      </header>
+
+      <section class="kpi-grid">
+        <article class="card kpi" th:each="kpi : ${snapshot.kpis()}">
+          <span th:text="${kpi.label()}">Active Users</span>
+          <strong th:text="${kpi.value()}">0</strong>
+          <small th:text="${kpi.caption()}">Repository backed</small>
+        </article>
+      </section>
+
+      <section class="grid-two">
+        <article class="card">
+          <div class="card-head">
+            <h2>Airports Per Area</h2>
+            <span>Repository count</span>
+          </div>
+          <div class="bar-list">
+            <div class="bar-row" th:each="bar : ${snapshot.airportsPerArea()}">
+              <span class="mono" th:text="${bar.label()}">LPPC</span>
+              <div><i th:style="|width: ${bar.value() * 10 + 8}px|"></i></div>
+              <strong th:text="${bar.value()}">0</strong>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Aircraft Models By Type</h2>
+            <span>Repository count</span>
+          </div>
+          <div class="bar-list">
+            <div class="bar-row" th:each="bar : ${snapshot.aircraftModelsByType()}">
+              <span th:text="${bar.label()}">JET</span>
+              <div><i th:style="|width: ${bar.value() * 10 + 8}px|"></i></div>
+              <strong th:text="${bar.value()}">0</strong>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="card map-card">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">Tactical Map</p>
+            <h2>Air Control Areas - EU Operations</h2>
+          </div>
+          <span><i class="legend-box"></i>Area <i class="legend-dot"></i>Airport</span>
+        </div>
+        <div class="map-shell">
+          <div class="map-wrap">
+            <div id="map"></div>
+            <div class="zoom-tier">
+              <span>Detail</span>
+              <button id="zoom-tier-overview" data-zoom="4">Overview</button>
+              <button id="zoom-tier-areas" data-zoom="5">Areas</button>
+              <button id="zoom-tier-airports" data-zoom="7">Airports</button>
+            </div>
+          </div>
+          <aside class="map-panel">
+            <header>Active Areas</header>
+            <button th:each="area, iter : ${snapshot.areaMap()}" type="button" th:attr="data-area-index=${iter.index}" class="map-area-btn">
+              <span>
+                <strong th:text="${area.code()}">LFEE</strong>
+                <small th:text="${area.name()}">Paris ACC</small>
+              </span>
+              <em th:text="${area.airportCount()} + ' airports'">6 airports</em>
+            </button>
+            <div th:if="${#lists.isEmpty(snapshot.areaMap())}" class="map-empty">No active areas registered.</div>
+          </aside>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script th:inline="javascript">
+    window.AISAFE_AREAS = /*[[${snapshot.areaMap()}]]*/ [];
+    window.AISAFE_AIRPORTS = /*[[${snapshot.airportMap()}]]*/ [];
+  </script>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/map.js"></script>
+</body>
+</html>

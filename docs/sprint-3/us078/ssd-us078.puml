@@ -1,0 +1,62 @@
+@startuml ssd-us078
+skinparam actorStyle awesome
+
+actor "Air Transport Company\nCollaborator" as ATCC
+participant ":AISafe System" as sys
+
+activate ATCC
+
+ATCC -> sys : launchRemoteClient(serverAddress, port)
+activate sys
+sys --> ATCC : remote access interface ready
+deactivate sys
+
+ATCC -> sys : login(username, password)
+activate sys
+
+note right of sys
+  Only users with the
+  AIR_TRANSPORT_COMPANY_COLLABORATOR
+  role are granted access.
+end note
+
+sys -> sys : authenticate(username, password)
+activate sys
+deactivate sys
+sys -> sys : verifyRole(AIR_TRANSPORT_COMPANY_COLLABORATOR)
+activate sys
+deactivate sys
+
+alt valid credentials AND role == ATCC
+    sys --> ATCC : access granted
+else invalid credentials or wrong role
+    sys --> ATCC : access denied
+    deactivate sys
+end
+
+loop while session active
+    ATCC -> sys : requestAtccOperation(operationType, args)
+    activate sys
+    note right of sys
+      Available operations:
+        - addAircraft              (US070)
+        - decommissionAircraft     (US071)
+        - listFleet                (US072)
+        - createFlightRoute        (US073)
+        - deactivateFlightRoute    (US074)
+        - addPilot                 (US075)
+        - listPilots               (US076)
+        - deactivatePilot          (US077)
+    end note
+    sys --> ATCC : operationResult
+    deactivate sys
+end
+
+ATCC -> sys : logout()
+activate sys
+sys --> ATCC : session ended
+deactivate sys
+
+deactivate ATCC
+
+@enduml

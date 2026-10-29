@@ -1,0 +1,211 @@
+@startuml
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>> #95A5A6
+    FontColor<<external>> #1A1A1A
+    BackgroundColor<<port>> #FCF3CF
+    BorderColor<<port>> #B7950B
+}
+
+' ============================================
+' PRESENTATION  (aisafe.app.pilot.console / aisafeweb)
+' ============================================
+package "Presentation / Adapters" {
+    class TestFlightPlanUI {
+        + doShow() : boolean
+    }
+    class ConsoleFlightPlanCompiler <<adapter>> {
+        + compile(rawDsl) : FlightPlanCompilationResult
+    }
+    class DslFlightPlanCompiler <<adapter>> <<external>> {
+        + compile(rawDsl) : FlightPlanCompilationResult
+    }
+}
+
+' ============================================
+' APPLICATION  (aisafe.core)
+' ============================================
+package "Application" {
+    class TestFlightPlanController <<UseCaseController>> {
+        + testFlightPlan(flightId) : FlightPlanTestResult
+    }
+    class SimulateFlightPlanController <<UseCaseController>> {
+        + simulateFor(pilotEmail, flightId) : Optional<FlightSimulationModel>
+    }
+    class SimulatorV1FlightPlanTestService <<DomainService>> <<Strategy impl>> {
+        + test(flight, plan) : FlightPlanTestResult
+        + simulate(flight, plan) : FlightSimulationModel
+    }
+    class WindResolver <<PureFabrication>> {
+        + resolve(parsed, assignments) : List<ResolvedSegment>
+    }
+    interface FlightPlanCompiler <<port>> {
+        + compile(rawDsl) : FlightPlanCompilationResult
+    }
+    class ParsedFlightPlan <<DTO>>
+    class ParsedSegment <<DTO>>
+    class FlightPlanIssue <<DTO>>
+    class FlightPlanCompilationResult <<DTO>>
+}
+
+' ============================================
+' DOMAIN  (aisafe.core)
+' ============================================
+package "Domain – Flight aggregate" {
+    class Flight <<aggregate root>> {
+        + pilot() : Email
+        + departure() : LocalDateTime
+        + testCurrentPlan(svc) : FlightPlanTestResult
+    }
+    class FlightPlan <<entity>> {
+        - status : FlightPlanStatus
+        + isValidated() : boolean
+        + rawDslContent() : String
+        + weatherAssignmentsBySegment() : Map<SegmentKey,WeatherDataId>
+        ~ markTested() : void
+    }
+    enum FlightPlanStatus {
+        DRAFT
+        VALIDATED
+        TESTED
+    }
+    interface FlightPlanTestService <<Strategy>> {
+        + test(flight, plan) : FlightPlanTestResult
+    }
+    class FlightPlanTestResult <<VO>>
+    class SegmentKey <<VO>> {
+        + {static} of(legNumber, segmentIndex) : SegmentKey
+    }
+    interface FlightRepository
+}
+
+' ============================================
+' DOMAIN :: physics  (aisafe.core) – Pure Fabrication, stateless §3.3
+' ============================================
+package "Domain :: physics" {
+    class Atmosphere <<utility>> {
+        + {static} density(altM) : double
+        + {static} temperatureK(altM) : double
+    }
+    class AircraftPhysics <<VO>> {
+        + {static} from(model, engine, seats) : AircraftPhysics
+        + thrustPerEngineAtSpeed(v) : double
+        + altitudeThrustFactor(rho) : double
+    }
+    class FuelBurnModel <<utility>> {
+        + {static} integrate(aircraft, segments,\nloadedFuelKg, blockSeconds) : FuelBurnResult
+    }
+    class FuelBurnResult <<VO>>
+    class ResolvedSegment <<VO>>
+    class FlightSimulationModel <<read-model>>
+    class FlightPlanTestVerdict <<VO>>
+    enum WindSource {
+        ATTACHED_FORECAST
+        DSL_BASELINE
+    }
+}
+
+' ============================================
+' EXTERNAL aggregates (read-only)
+' ============================================
+package "Other contexts (read-only)" {
+    class AircraftModel <<aggregate root>> <<external>> {
+        + aspectRatio() : double  '' US055 ext
+        + wingSpan() : double     '' US055 ext
+    }
+    class EngineModel <<aggregate root>> <<external>> {
+        + cruiseThrust() : double '' US056 ext
+        + efficiency() : double
+    }
+    class WeatherData <<aggregate root>> <<external>>
+    interface WeatherDataRepository <<external>>
+    interface AircraftRepository <<external>>
+    interface AircraftModelRepository <<external>>
+}
+
+' ============================================
+' Relationships
+' ============================================
+TestFlightPlanUI ..> TestFlightPlanController : uses
+TestFlightPlanUI ..> ConsoleFlightPlanCompiler : injects
+
+ConsoleFlightPlanCompiler ..|> FlightPlanCompiler
+DslFlightPlanCompiler ..|> FlightPlanCompiler
+
+TestFlightPlanController ..> FlightRepository : resolve / save (R5)
+TestFlightPlanController ..> Flight : testCurrentPlan
+SimulateFlightPlanController ..> SimulatorV1FlightPlanTestService : simulate (read-only)
+
+SimulatorV1FlightPlanTestService ..|> FlightPlanTestService
+SimulatorV1FlightPlanTestService ..> FlightPlanCompiler : recompile (R1)
+SimulatorV1FlightPlanTestService ..> WindResolver
+SimulatorV1FlightPlanTestService ..> FuelBurnModel
+SimulatorV1FlightPlanTestService ..> AircraftPhysics
+SimulatorV1FlightPlanTestService ..> FlightSimulationModel : <<creates>>
+SimulatorV1FlightPlanTestService ..> ParsedFlightPlan
+
+FlightPlanCompiler ..> FlightPlanCompilationResult
+FlightPlanCompilationResult o-- ParsedFlightPlan
+FlightPlanCompilationResult o-- "*" FlightPlanIssue
+ParsedFlightPlan *-- "1..*" ParsedSegment
+
+WindResolver ..> WeatherDataRepository
+WindResolver ..> SegmentKey
+WindResolver ..> ResolvedSegment : <<creates>>
+ResolvedSegment --> WindSource
+
+AircraftPhysics ..> AircraftModel
+AircraftPhysics ..> EngineModel
+FuelBurnModel ..> Atmosphere
+FuelBurnModel ..> ResolvedSegment
+FuelBurnModel ..> FuelBurnResult : <<creates>>
+
+Flight *-- "1..*" FlightPlan
+FlightPlan *-- FlightPlanStatus
+FlightPlan ..> SegmentKey
+Flight ..> FlightPlanTestService : runs (Strategy)
+
+SimulatorV1FlightPlanTestService ..> AircraftRepository
+SimulatorV1FlightPlanTestService ..> AircraftModelRepository
+SimulatorV1FlightPlanTestService ..> WeatherDataRepository
+
+' One attached note + a legend: the Smetana fallback layout (no Graphviz
+' here) aborts with >1 attached note, so the rest of the concept
+' annotations live in the legend. Render: see CLAUDE.md (-Playout=smetana).
+note bottom of FlightPlan
+  Invariant (Invariants -> IllegalStateException):
+  markTested() promotes ONLY a VALIDATED plan (R4).
+  Failed test ⇒ never called ⇒ state untouched (R5).
+end note
+
+legend right
+  GRASP concepts in US085:
+  • Strategy (T7): FlightPlanTestService — the controller depends on the
+    abstraction; SimulatorV1...Service is the production strategy and a
+    BasicFlightPlanTestService placeholder is interchangeable.
+  • Adapter / Separated Interface (T5) + Indirection (GRASP): FlightPlanCompiler
+    is a core-owned port; ConsoleFlightPlanCompiler & DslFlightPlanCompiler supply
+    DSL adapters, so aisafe.core stays DSL-unaware (like weather's
+    WeatherDataSourceReader).
+  • Domain Service (T4): the recompile→resolve→physics→verdict pipeline is owned
+    by no single aggregate.
+  • Pure Fabrication + Information Expert: Atmosphere / AircraftPhysics /
+    FuelBurnModel / WindResolver — stateless §3.3 maths, repository-free.
+  • SegmentKey: one shared (leg 1-based, segment 0-based) derivation so US082
+    attach and US085 resolve cannot drift (Low Coupling / DRY).
+  • DIP / OCP / Protected Variations: a new test engine or DSL front-end plugs in
+    with no change to the controller or domain.
+endlegend
+
+@enduml

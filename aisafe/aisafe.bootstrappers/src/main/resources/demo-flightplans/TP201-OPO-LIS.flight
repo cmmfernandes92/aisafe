@@ -1,0 +1,48 @@
+flight TP201 {
+  type: regular
+
+  route {
+    origin: LPPR
+    destination: LPPT
+  }
+
+  leg 1 {
+    departure { airport: LPPR  datetime: __DEPARTURE__ }
+    arrival   { airport: LPPT  datetime: __ARRIVAL__ }
+    fuel: 7000 kg
+    segments {
+      segment {
+        start: (41.2356, -8.6781)
+        end:   (40.6178, -8.78905)
+        slots {
+          slot { altitude: 1000 m  width: 500 m }
+        }
+        wind { direction: 350  speed: 8.0 m/s }
+      }
+      segment {
+        start: (40.6178, -8.78905)
+        end:   (40.0000, -8.9000)
+        slots {
+          slot { altitude: 3500 m  width: 500 m }
+        }
+        wind { direction: 350  speed: 8.0 m/s }
+      }
+      segment {
+        start: (40.0000, -8.9000)
+        end:   (39.3871, -9.0171)
+        slots {
+          slot { altitude: 3500 m  width: 500 m }
+        }
+        wind { direction: 340  speed: 6.5 m/s }
+      }
+      segment {
+        start: (39.3871, -9.0171)
+        end:   (38.7742, -9.1342)
+        slots {
+          slot { altitude: 1 m  width: 500 m }
+        }
+        wind { direction: 340  speed: 6.5 m/s }
+      }
+    }
+  }
+}

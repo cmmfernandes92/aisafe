@@ -1,0 +1,33 @@
+@startuml ssd-us077
+skinparam actorStyle awesome
+
+actor "Air Transport Company\nCollaborator" as ATCC
+participant ":AISafe System" as System
+
+activate ATCC
+
+ATCC -> System : requestDeactivatePilot()
+activate System
+System --> ATCC : show active pilots of the ATCC's company
+deactivate System
+
+ATCC -> System : deactivatePilot(pilotEmail)
+activate System
+
+note right of System
+  System fetches the pilot's assigned flights,
+  prints the report and decides:
+    - if no assigned flights → set status INACTIVE, persist
+    - otherwise → block deactivation
+end note
+
+alt pilot has no assigned flights
+    System --> ATCC : assigned-flights report (empty) + "Pilot deactivated"
+else pilot has assigned flights
+    System --> ATCC : assigned-flights report + "Failed to deactivate pilot: X assigned flight(s) found"
+end
+deactivate System
+
+deactivate ATCC
+
+@enduml

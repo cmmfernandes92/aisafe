@@ -1,0 +1,123 @@
+@startuml sd-us077
+skinparam actorStyle awesome
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+autonumber
+
+title US077 – Deactivate a Pilot (realization)
+
+actor "Air Transport Company\nCollaborator" as A
+participant ":DeactivatePilotUI" as UI <<presentation>>
+participant ":ConsoleAssignedFlightsReporter" as REPORTER <<presentation>>
+participant ":DeactivatePilotController" as CTRL <<application>>
+participant ":AuthorizationService" as AUTH <<infrastructure>>
+participant ":UserRepository" as USERS <<persistence>>
+participant ":CollaboratorRepository" as COLLAB <<persistence>>
+participant ":PilotRepository" as PREP <<persistence>>
+participant ":FlightRepository" as FREP <<persistence>>
+participant "pilot:Pilot" as PILOT <<domain>>
+
+activate A
+
+A -> UI : starts "Deactivate Pilot"
+activate UI
+
+UI -> CTRL : listActivePilotsOfMyCompany()
+activate CTRL
+
+CTRL -> AUTH : ensureAuthenticatedUserHasAnyOf(ATCC, POWER_USER)
+activate AUTH
+AUTH --> CTRL : ok
+deactivate AUTH
+note right of CTRL : I4 – authz at the application layer
+
+alt authenticated user is POWER_USER
+    CTRL -> PREP : findAllActivePilots()
+    activate PREP
+    PREP --> CTRL : Iterable<Pilot>
+    deactivate PREP
+else authenticated user is ATCC
+    CTRL -> AUTH : session().authenticatedUser()
+    activate AUTH
+    AUTH --> CTRL : systemUser
+    deactivate AUTH
+
+    CTRL -> USERS : findBySystemUser(systemUser)
+    activate USERS
+    USERS --> CTRL : aisafeUser
+    deactivate USERS
+
+    CTRL -> COLLAB : findCompanyCollaboratorByEmail(aisafeUser.identity())
+    activate COLLAB
+    COLLAB --> CTRL : companyCode
+    deactivate COLLAB
+
+    CTRL -> PREP : findAllActivePilotsByCompanyCode(companyCode)
+    activate PREP
+    PREP --> CTRL : Iterable<Pilot>
+    deactivate PREP
+    note right of CTRL : I1 – only pilots of the ATCC's own company
+end
+
+CTRL --> UI : Iterable<Pilot>
+deactivate CTRL
+
+UI --> A : numbered list of active pilots + prompt for pilot email
+deactivate UI
+
+A -> UI : pilotEmail
+activate UI
+
+UI -> CTRL : deactivatePilot(pilotEmail, reporter)
+activate CTRL
+
+CTRL -> AUTH : ensureAuthenticatedUserHasAnyOf(ATCC, POWER_USER)
+activate AUTH
+AUTH --> CTRL : ok
+deactivate AUTH
+
+CTRL -> PREP : ofIdentity(Email.valueOf(pilotEmail))
+activate PREP
+PREP --> CTRL : pilot
+deactivate PREP
+note right of CTRL : I8 – pilot must exist
+
+CTRL -> FREP : flightsOf(email)
+activate FREP
+FREP --> CTRL : Iterable<Flight>
+deactivate FREP
+
+CTRL -> CTRL : build List<AssignedFlightDTO>
+
+CTRL -> REPORTER : report(assignedFlights)
+activate REPORTER
+REPORTER --> CTRL : report printed to console
+deactivate REPORTER
+
+alt assignedFlights NOT empty
+    CTRL --> UI : throw IllegalStateException("X assigned flight(s) found")
+    deactivate CTRL
+    UI --> A : "Failed to deactivate pilot: X assigned flight(s) found."
+    deactivate UI
+else assignedFlights empty
+    CTRL -> PILOT : deactivate()
+    activate PILOT
+    note right of PILOT : I2 – throws if already INACTIVE
+    PILOT --> CTRL : status set to INACTIVE
+    deactivate PILOT
+
+    CTRL -> PREP : save(pilot)
+    activate PREP
+    PREP --> CTRL : pilot (persisted)
+    deactivate PREP
+
+    CTRL --> UI : void
+    deactivate CTRL
+
+    UI --> A : "Pilot deactivated: [email]"
+    deactivate UI
+end
+
+deactivate A
+
+@enduml

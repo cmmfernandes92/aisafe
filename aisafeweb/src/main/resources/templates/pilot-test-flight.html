@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AISafe - Test Flight Plan</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260612-pilot-test">
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar('test-flight-plan', ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Pilot Operations</p>
+          <h1>Test Flight Plan</h1>
+          <p class="page-copy">
+            Run the flight-simulation test on one of your VALIDATED plans. The system
+            recompiles the plan, overlays the weather you attached, and runs the
+            aircraft-physics model. On success the plan is promoted to TESTED; on
+            failure its state is left unchanged and the reasons are shown.
+          </p>
+        </div>
+      </header>
+
+      <section class="areas-grid">
+        <article th:replace="~{fragments/pilot-flights :: panel(${flights}, ${planStatuses})}"></article>
+
+        <aside class="card form-card">
+          <div class="card-head">
+            <h2>Test / Validate</h2>
+          </div>
+          <div id="form-result"></div>
+          <form hx-post="/modules/pilot-operations/test-flight-plan"
+                hx-target="#form-result" hx-swap="innerHTML" class="stack">
+            <label>
+              <span>Flight to test (VALIDATED plan)</span>
+              <select name="flightKey" required>
+                <option value="">Select a flight</option>
+                <option th:each="f : ${testFlights}"
+                        th:value="${f.route() + '|' + f.departureDate()}"
+                        th:text="|${f.route()} · ${f.departure()} · ${f.aircraft()} · ${f.planStatus()}|">FR401 · 2026-06-12 13:00 · CS-MNB · VALIDATED</option>
+              </select>
+              <p class="field-note" th:if="${#lists.isEmpty(testFlights)}">
+                You have no VALIDATED plan to test. Import a flight plan first, then attach weather (optional).
+              </p>
+            </label>
+
+            <button type="submit">Run Test</button>
+          </form>
+        </aside>
+      </section>
+    </main>
+  </div>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/sortable-table.js"></script>
+  <script src="/js/pilot-flights.js"></script>
+</body>
+</html>

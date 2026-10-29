@@ -1,0 +1,116 @@
+@startuml us072_class_diagram
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>> #95A5A6
+    FontColor<<external>> #1A1A1A
+}
+
+' ============================================
+' PRESENTATION (aisafe.app.atcc.console)
+' ============================================
+package "Presentation" {
+    class MainMenu <<external>> {
+        + buildMainMenu()
+    }
+    class ListFleetAction {
+        + execute() : boolean
+    }
+    class ListFleetUI {
+        + doShow() : boolean
+    }
+}
+
+' ============================================
+' APPLICATION (aisafe.core)
+' ============================================
+package "Application" {
+    class ListFleetController <<UseCaseController>> {
+        + listFleet() : Iterable<Aircraft>
+        + listFleetByModel(modelId) : Iterable<Aircraft>
+        + listFleetByMaker(makerId) : Iterable<Aircraft>
+        + listFleetByMinCapacity(minSeats : int) : Iterable<Aircraft>
+        + listFleetByMaxAge(maxAgeYears : int) : Iterable<Aircraft>
+    }
+}
+
+' ============================================
+' DOMAIN (aisafe.core)
+' ============================================
+package "Domain" {
+    class Aircraft <<aggregate root>> {
+        + identity() : Registration
+        + status() : OperationalStatus
+    }
+    class Registration <<value object>>
+    class CabinConfiguration <<value object>> {
+        + totalSeats() : int
+    }
+    enum OperationalStatus <<enum>> {
+        ACTIVE
+        RETIRED
+    }
+    interface AircraftRepository {
+        + findAllByCompany(companyId) : Iterable<Aircraft>
+    }
+
+    ' External — actor resolution
+    class CompanyCollaborator <<external>>
+    interface CompanyCollaboratorRepository <<external>> {
+        + findByUser(username) : Optional<CompanyCollaborator>
+    }
+
+    ' External — filter context
+    class AircraftModel <<external>>
+    class Maker <<external>>
+}
+
+' ============================================
+' INFRASTRUCTURE (eapli.framework)
+' ============================================
+package "Infrastructure" {
+    class AuthorizationService <<external>> {
+        + loggedinUserWithPermission(role) : SystemUser
+    }
+}
+
+' ============================================
+' PERSISTENCE (aisafe.persistence.impl)
+' ============================================
+package "Persistence" {
+    class InMemoryAircraftRepository
+    class JpaAircraftRepository
+}
+
+' ============================================
+' Relationships
+' ============================================
+MainMenu --> ListFleetAction : registers
+ListFleetAction ..> ListFleetUI : invokes
+ListFleetUI ..> ListFleetController : uses
+
+ListFleetController ..> AuthorizationService : gets logged-in user
+ListFleetController ..> CompanyCollaboratorRepository : resolves company
+ListFleetController ..> AircraftRepository : queries
+
+Aircraft *-- Registration
+Aircraft *-- CabinConfiguration
+Aircraft *-- OperationalStatus
+
+Aircraft --> AircraftModel : references by id
+AircraftModel --> Maker : manufactured by
+
+InMemoryAircraftRepository ..|> AircraftRepository
+JpaAircraftRepository ..|> AircraftRepository
+
+@enduml

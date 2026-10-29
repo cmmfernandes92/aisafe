@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AISafe - Deactivate Flight Route</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260614-atcc-route-deactivate">
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar('deactivate-flight-route', ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">US074</p>
+          <h1>Deactivate Flight Route</h1>
+          <p class="page-copy">Deactivate an active route when no planned flights use it on or after the effective date.</p>
+        </div>
+      </header>
+
+      <section class="areas-grid">
+        <article th:replace="~{fragments/table-card :: card(
+            'Registered Routes',
+            '/modules/air-transport-company/routes/table',
+            '#routes-tbody',
+            'Refresh routes',
+            ~{::#routes-head},
+            ~{fragments/routes :: rows})}">
+          <thead id="routes-head">
+          <tr>
+            <th>Route</th>
+            <th>Company</th>
+            <th>Company Name</th>
+            <th>Origin</th>
+            <th>Destination</th>
+            <th>Status</th>
+          </tr>
+          </thead>
+        </article>
+
+        <aside class="card form-card">
+          <div class="card-head">
+            <h2>Deactivate Route</h2>
+            <span>US074</span>
+          </div>
+          <div id="route-action-result"></div>
+          <form hx-post="/modules/air-transport-company/deactivate-flight-route"
+                hx-target="#route-action-result"
+                hx-swap="innerHTML"
+                class="stack">
+            <label>
+              <span>Route Name</span>
+              <select name="routeName" required>
+                <option value="">Select active route</option>
+                <option th:each="route : ${routes}"
+                        th:if="${route.active()}"
+                        th:value="${route.routeName()}"
+                        th:text="|${route.routeName()} - ${route.originIata()} to ${route.destinationIata()}|">TP101 - LIS to OPO</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Effective Date</span>
+              <input name="effectiveDate" type="date" required>
+            </label>
+
+            <button type="submit">Deactivate Route</button>
+          </form>
+        </aside>
+      </section>
+    </main>
+  </div>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/sortable-table.js"></script>
+</body>
+</html>

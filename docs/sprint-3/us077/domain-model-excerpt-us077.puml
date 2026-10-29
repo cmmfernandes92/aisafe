@@ -1,0 +1,105 @@
+@startuml domain-model-excerpt-us077
+title Domain Model Excerpt Relevant to US077 (Deactivate a Pilot)
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor      #5B9BD5
+skinparam classFontColor        #1A1A1A
+skinparam packageStyle           rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor     #888888
+skinparam defaultFontSize        11
+hide empty members
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>>     #95A5A6
+    FontColor<<external>>       #1A1A1A
+    BackgroundColor<<new>>      #D5F5E3
+    BorderColor<<new>>          #58D68D
+}
+
+' ============================================================
+' AGGREGATE: Pilot (from US075 — US077 adds deactivate())
+' ============================================================
+package "Pilot Aggregate" {
+    class Pilot <<aggregate root>> {
+        status : PilotStatus
+    }
+    enum PilotStatus {
+        ACTIVE
+        INACTIVE
+    }
+
+    Pilot --> PilotStatus : has
+
+    note right of Pilot
+        deactivate() throws IllegalStateException
+        if status is already INACTIVE (I2).
+        Cross-aggregate guard (I3) is enforced
+        in the controller, not here.
+    end note
+}
+
+' ============================================================
+' AGGREGATE: User (external — owns the Email value object)
+' ============================================================
+package "User Aggregate" #EEEEEE {
+    class User <<aggregate root>> <<external>>
+    class Email <<value object>> <<external>>
+
+    User *-- Email
+}
+
+' ============================================================
+' AGGREGATE: AirTransportCompany (external — owns CompanyIATACode)
+' ============================================================
+package "AirTransportCompany Aggregate" #EEEEEE {
+    class AirTransportCompany <<aggregate root>> <<external>>
+    class CompanyIATACode <<value object>> <<external>>
+
+    AirTransportCompany *-- CompanyIATACode
+}
+
+' ============================================================
+' AGGREGATE: AircraftModel (external — pilot certifications)
+' ============================================================
+package "AircraftModel Aggregate" #EEEEEE {
+    class AircraftModel <<aggregate root>> <<external>>
+}
+
+' ============================================================
+' AGGREGATE: Flight (from US080 — read-only from US077)
+' ============================================================
+package "Flight Aggregate" #EEEEEE {
+    class Flight <<aggregate root>> <<external>> {
+        departure : LocalDateTime
+    }
+    class FlightPlan <<entity>> <<external>> {
+        status : FlightPlanStatus
+    }
+    enum FlightPlanStatus <<external>> {
+        DRAFT
+        VALIDATED
+        TESTED
+    }
+
+    Flight *-- "1..*" FlightPlan : owns
+    FlightPlan --> FlightPlanStatus : has
+}
+
+' ============================================================
+' CROSS-AGGREGATE REFERENCES
+' ============================================================
+Pilot --> User                : identity (by Email)
+Pilot --> AirTransportCompany : belongs to (by CompanyIATACode)
+Pilot --> "1..*" AircraftModel : certified for
+Flight --> Pilot              : assigned to (by Email)
+
+note bottom of Flight
+    US077 only reads this aggregate.
+    It is never modified by this US.
+    Any assigned Flight blocks deactivation.
+end note
+
+@enduml

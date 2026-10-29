@@ -1,0 +1,106 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam defaultFontSize 11
+skinparam packageStyle rectangle
+skinparam packageBorderColor #888888
+hide empty members
+top to bottom direction
+
+' ============================================
+' OPTION A — Single Aggregate (SELECTED)
+' ============================================
+package "Option A — Single Aggregate  ✔  SELECTED" #DFFFDF {
+    together {
+        class "Flight" as FlightA <<aggregate root>> #90EE90 {
+            flightDesignator
+            departure
+        }
+        class "FlightPlan" as PlanA <<entity>> #90EE90 {
+            flightPlanID
+            status {DRAFT, VALID}
+        }
+        class "FlightLeg" as LegA <<entity>> #90EE90 {
+            departureInfo
+            arrivalInfo
+            fuelLoad
+        }
+        class "FlightSegment" as SegA <<entity>> #90EE90 {
+            waypoints
+            altitudeSlot
+        }
+    }
+
+    FlightA *-- "1..*" PlanA : {cascade=ALL}
+    PlanA *-- "1..*" LegA
+    LegA *-- "1..*" SegA
+
+    note bottom of FlightA
+        **Consistency:** ACID
+        **Invariant:** at most one VALID plan
+        enforced transactionally
+        **Arrival time:** derived internally
+    end note
+}
+
+' ============================================
+' OPTION B — Separate Aggregates
+' ============================================
+package "Option B — Separate Aggregates" #FFF3E0 {
+    together {
+        class "Flight" as FlightB <<aggregate root>> {
+            flightDesignator
+            departure
+            validPlanRef
+        }
+        class "FlightPlan" as PlanB <<aggregate root>> {
+            flightPlanID
+            status {DRAFT, VALID}
+        }
+        class "FlightLeg" as LegB <<entity>> {
+            departureInfo
+            arrivalInfo
+        }
+    }
+
+    FlightB --> "1..*" PlanB : {cascade=NONE}
+    PlanB *-- "1..*" LegB
+
+    note bottom of FlightB
+        **Consistency:** BASE (eventual)
+        **Problem:** "only one VALID"
+        requires domain service
+        — risk of race condition
+    end note
+}
+
+' ============================================
+' OPTION C — Separate + Derived Arrival
+' ============================================
+package "Option C — Separate + Derived" #FFE0E0 {
+    together {
+        class "Flight" as FlightC <<aggregate root>> {
+            flightDesignator
+            departure
+        }
+        class "FlightPlan" as PlanC <<aggregate root>> {
+            flightPlanID
+            status
+        }
+        class "ArrivalService" as SvcC <<service>> {
+            getArrivalTime(flight)
+        }
+    }
+
+    FlightC --> "1..*" PlanC : {cascade=NONE}
+    SvcC ..> FlightC
+    SvcC ..> PlanC
+
+    note bottom of FlightC
+        **Consistency:** BASE (eventual)
+        **Problem:** arrival time requires
+        cross-aggregate service query
+        — Flight cannot self-describe
+    end note
+}
+
+@enduml

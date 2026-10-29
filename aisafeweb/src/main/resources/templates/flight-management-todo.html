@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title th:text="'AISafe - ' + ${pageTitle}">AISafe - Flight Control</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260606-flight-mgmt-nav">
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar(${activePage}, ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow" th:text="${userStory}">US000</p>
+          <h1 th:text="${pageTitle}">Flight Control</h1>
+          <p class="page-copy" th:text="${pageDescription}">
+            Pending implementation.
+          </p>
+        </div>
+      </header>
+
+      <section class="card module-placeholder">
+        <div>
+          <p class="eyebrow">Pending Implementation</p>
+          <h2>TODO</h2>
+          <p>
+            This Flight Control page is wired into the shell and navigation.
+            Domain/controller integration is still pending.
+          </p>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="/js/sidebar.js"></script>
+</body>
+</html>

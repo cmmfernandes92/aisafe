@@ -1,0 +1,126 @@
+@startuml domain-model-excerpt-us111
+title Domain Model Excerpt Relevant to US111 (Generate a Simulation Report)
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor      #5B9BD5
+skinparam classFontColor        #1A1A1A
+skinparam packageStyle           rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor     #888888
+skinparam defaultFontSize        11
+hide empty members
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>>     #95A5A6
+    FontColor<<external>>       #1A1A1A
+    BackgroundColor<<new>>      #D5F5E3
+    BorderColor<<new>>          #58D68D
+}
+
+' ============================================================
+' AGGREGATE: SimulationRun (from the global Sprint-3 Domain Model)
+' US111 introduces NO new aggregate. It populates the SAME
+' SimulationRun aggregate by INGESTING the simulation report
+' file produced by the C simulation component (US109).
+' Classes tagged <<new>> are the deltas US111 forces onto the
+' existing model, ingested from the US109 simulator report:
+'  - a per-flight execution status (US111.2);
+'  - a violation KIND (US111.3) — the report now distinguishes a
+'    loss of separation from an altitude ceiling/floor bust, so a
+'    SafetyViolation involves 1 (altitude) or 2 (separation) flights,
+'    each captured as an InvolvedFlight value object.
+' ============================================================
+package "SimulationRun Aggregate" {
+    class SimulationRun <<aggregate root>> {
+        simulationID
+        safetyThreshold
+    }
+    class TimeRange <<value object>>
+    class PerformanceSettings <<value object>>
+    class SimulationResult <<entity>>
+
+    class FlightExecutionStatus <<entity>> <<new>> {
+        flightDesignator
+        exitCode
+    }
+    enum FlightOutcome <<enum>> <<new>> {
+        COMPLETED
+        ABORTED
+        TERMINATED_BY_VIOLATION
+        CRASHED
+    }
+
+    class SafetyViolation <<entity>> {
+        violationTimestamp
+        horizontalDistance
+        verticalDistance
+    }
+    enum ViolationKind <<enum>> <<new>> {
+        SEPARATION
+        ALTITUDE_CEILING
+        ALTITUDE_FLOOR
+        UNKNOWN
+    }
+    class InvolvedFlight <<value object>> <<new>> {
+        flightDesignator
+        position
+        velocity
+    }
+
+    enum SimulationStatus <<enum>> {
+        CREATED
+        RUNNING
+        COMPLETED
+        FAILED
+    }
+    enum ValidationOutcome <<enum>> {
+        PASS
+        FAIL
+    }
+
+    SimulationRun *-- TimeRange
+    SimulationRun *-- SimulationStatus
+    SimulationRun *-- PerformanceSettings
+    SimulationRun *-- "0..1" SimulationResult
+
+    SimulationResult *-- ValidationOutcome
+    SimulationResult *-- "0..*" FlightExecutionStatus
+    SimulationResult *-- "0..*" SafetyViolation
+
+    FlightExecutionStatus *-- FlightOutcome
+    SafetyViolation *-- ViolationKind
+    SafetyViolation *-- "1..2" InvolvedFlight : one per involved flight\n(1 = altitude bust · 2 = loss of separation)
+}
+
+' ============================================================
+' EXTERNAL AGGREGATE (reference only, grey)
+' Each report flight must resolve to a Flight in the system so
+' the run can be aggregated later (e.g. US112). The reference
+' is root-to-root, by identity (FlightDesignator); no internal
+' of either aggregate crosses the boundary.
+' ============================================================
+package "Flight Aggregate" #EEEEEE {
+    class Flight <<aggregate root>> <<external>>
+}
+
+' Cross-aggregate reference is root-to-root only; inner entities/VOs
+' hold the flight identity by value (FlightDesignator), never an
+' association to the external aggregate.
+SimulationRun --> "1..*" Flight : includes flights (by FlightDesignator)
+
+note top of FlightExecutionStatus
+  <<new>> update US111 forces onto the model:
+  the report lists each flight's execution
+  outcome + exit code (US111.2).
+end note
+
+note bottom of ViolationKind
+  <<new>> update US111 forces onto the model:
+  the report now classifies each violation
+  (US111.3). A separation involves two flights;
+  an altitude ceiling/floor bust involves one.
+end note
+
+@enduml

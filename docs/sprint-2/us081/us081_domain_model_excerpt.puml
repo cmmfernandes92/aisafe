@@ -1,0 +1,121 @@
+@startuml flight-domain-excerpt-for-us081
+title Team Domain Model — Excerpt Relevant to US081 (Create Flight Plan from File)
+caption Subset extracted from the project's main domain model.\nShows the aggregates created, referenced, or traversed by the import-from-file use case.
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor      #5B9BD5
+skinparam packageStyle           rectangle
+skinparam packageBorderColor     #888888
+skinparam defaultFontSize        11
+hide empty members
+left to right direction
+
+' ============================================================
+' Flight Aggregate — the FlightPlan is created inside here
+' ============================================================
+package "Flight Aggregate" {
+    class Flight <<aggregate root>>
+    class FlightDesignator <<value object>>
+
+    class FlightPlan <<entity>> {
+        flightPlanID
+    }
+    enum FlightPlanStatus <<enum>> {
+        DRAFT
+        VALIDATED
+        TESTED
+    }
+
+    class FlightLeg <<entity>>
+    class DepartureInfo <<value object>>
+    class ArrivalInfo <<value object>>
+    class FuelLoad <<value object>>
+
+    class FlightSegment <<entity>>
+    class Waypoint <<value object>>
+    class Coordinates <<value object>>
+    class AltitudeSlot <<value object>>
+    class WindDirection <<value object>>
+    class WindSpeed <<value object>>
+
+    Flight *-- FlightDesignator
+    Flight *-- "1..*" FlightPlan
+
+    FlightPlan *-- FlightPlanStatus
+    FlightPlan *-- "1..*" FlightLeg
+
+    FlightLeg *-- DepartureInfo
+    FlightLeg *-- ArrivalInfo
+    FlightLeg *-- FuelLoad
+    FlightLeg *-- "1..*" FlightSegment
+
+    FlightSegment *-- "2" Waypoint : start, end
+    FlightSegment *-- "1..*" AltitudeSlot
+    FlightSegment *-- WindDirection
+    FlightSegment *-- WindSpeed
+
+    Waypoint *-- Coordinates
+}
+
+' ============================================================
+' Pilot Aggregate — the actor who performs the import
+' ============================================================
+package "Pilot Aggregate" {
+    class Pilot <<aggregate root>>
+}
+
+' ============================================================
+' Airport Aggregate — referenced by departure/arrival info
+' ============================================================
+package "Airport Aggregate" {
+    class Airport <<aggregate root>>
+    class AirportIATACode <<value object>>
+    class AirportICAOCode <<value object>>
+
+    Airport *-- AirportIATACode
+    Airport *-- AirportICAOCode
+}
+
+' ============================================================
+' FlightRoute Aggregate — origin and destination of the flight
+' ============================================================
+package "FlightRoute Aggregate" {
+    class FlightRoute <<aggregate root>>
+    class RouteName <<value object>>
+
+    FlightRoute *-- RouteName
+}
+
+' ============================================================
+' Cross-aggregate relationships relevant to US081
+' ============================================================
+Flight     --> Pilot        : assigned to
+Flight     --> FlightRoute  : for route
+
+DepartureInfo --> Airport   : from
+ArrivalInfo   --> Airport   : to
+FlightRoute   --> "2" Airport : origin, destination
+
+' ============================================================
+' US081 import note
+' ============================================================
+note as ImportNote
+  **US081 import flow**
+
+  1. Pilot selects a .flight file.
+  2. System validates it via US083 DSL compiler
+     (lexical → syntactic → semantic).
+  3. If invalid: error messages with phase, line, column.
+     Import is aborted (AC#3, AC#4).
+  4. If valid: a new FlightPlan is created with
+     status = **DRAFT** and attached to the existing Flight
+     identified by the designator in the DSL file.
+
+  Status transitions:
+    DRAFT (US081 import) → VALIDATED → TESTED
+end note
+
+ImportNote .. FlightPlan
+
+@enduml

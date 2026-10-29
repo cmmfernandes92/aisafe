@@ -1,0 +1,57 @@
+<div xmlns:th="http://www.thymeleaf.org">
+  <div th:fragment="candidateRows">
+    <div th:if="${message != null}" class="alert error" th:text="${message}">Invalid window.</div>
+    <table class="sortable-table">
+      <thead>
+      <tr>
+        <th>Route</th>
+        <th>Departure</th>
+        <th>Aircraft</th>
+        <th>Plan</th>
+        <th>Segs in area</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr th:each="c : ${candidates}">
+        <td class="mono" th:text="${c.route()}">TP101</td>
+        <td class="mono" th:text="${c.departure()}">2026-06-12T13:00</td>
+        <td class="mono" th:text="${c.aircraft()}">CS-TNA</td>
+        <td class="mono" th:text="${c.designator()}">TP101</td>
+        <td class="mono" th:text="${c.segmentsInArea()}">2</td>
+      </tr>
+      <tr th:if="${#lists.isEmpty(candidates)}">
+        <td colspan="5" class="empty" th:text="${area != null}
+              ? 'No TESTED flights cross your area in this window.'
+              : 'No control area is assigned to this account.'">No candidates.</td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div th:fragment="result">
+    <div th:if="${success != null}" th:class="${success} ? 'alert ok' : 'alert error'" role="status">
+      <span th:text="${message}">Simulation completed.</span>
+    </div>
+
+    <div th:if="${run != null}" class="run-result">
+      <p class="path-note">All files for this run (scenario JSON, report, violations, id map) live in:
+        <span class="path-value mono" th:text="${runDir}">/.../runs/LPPC-YYYYMMDDHHmmss</span>
+      </p>
+
+      <table class="sortable-table id-map">
+        <thead>
+        <tr>
+          <th>Native id</th>
+          <th>Flight id</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="entry : ${run.idMap().entrySet()}">
+          <td class="mono" th:text="${entry.key}">1</td>
+          <td class="mono" th:text="${entry.value}">TP101@2026-06-12</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

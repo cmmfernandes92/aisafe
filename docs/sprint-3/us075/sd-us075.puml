@@ -1,0 +1,38 @@
+@startuml
+
+actor "Air Transport Company Collaborator" as ATCC
+
+participant "AddPilotUI" as UI
+participant "AddPilotController" as Controller
+participant "UserRepository" as UserRepo
+participant "AircraftModelRepository" as ModelRepo
+participant "PilotCreationService" as Service
+participant "PilotRepository" as PilotRepo
+participant "Pilot" as Pilot
+
+ATCC -> UI : add pilot
+
+UI -> Controller : addPilot(email, modelIds)
+
+Controller -> UserRepo : findByEmail(email)
+UserRepo --> Controller : user
+
+Controller -> ModelRepo : findByIds(modelIds)
+ModelRepo --> Controller : models
+
+Controller -> Service : createPilot(user, models)
+
+Service -> Pilot : new Pilot(...)
+Pilot --> Service : pilot
+
+Service --> Controller : pilot
+
+Controller -> PilotRepo : save(pilot)
+
+PilotRepo --> Controller : saved
+
+Controller --> UI : success
+
+UI --> ATCC : confirmation
+
+@enduml

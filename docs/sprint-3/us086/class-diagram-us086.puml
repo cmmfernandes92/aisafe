@@ -1,0 +1,139 @@
+@startuml class-diagram-us086
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 13
+skinparam roundcorner 8
+skinparam classBackgroundColor #FEFEFE
+skinparam classBorderColor #AAAAAA
+skinparam arrowColor #555555
+
+package "eapli.aisafe.app.pilot.console" {
+
+    class PilotApp {
+        + {static} main(args : String[]) : void
+        # doMain(args : String[]) : void
+        # appTitle() : String
+        # appGoodbye() : String
+        # doSetupEventHandlers(d : EventDispatcher) : void
+    }
+
+}
+
+package "eapli.aisafe.app.pilot.console.infrastructure.tcp" {
+
+    class PilotTcpServer implements Runnable {
+        - port : int
+        - serverSocket : ServerSocket
+        + PilotTcpServer()
+        + run() : void
+        + stop() : void
+        ~ createServerSocket(p : int) : ServerSocket
+    }
+
+    class PilotConnectionHandler implements Runnable {
+        - clientSocket : Socket
+        - credentialHandler : CredentialHandler
+        - sessionContext : PilotSessionContext
+        + PilotConnectionHandler(clientSocket : Socket)
+        ~ PilotConnectionHandler(clientSocket, credentialHandler, sessionContext)
+        + run() : void
+        ~ handleSession(in : DataInputStream, out : DataOutputStream) : void
+        ~ dispatch(commandCode : byte, in, out) : void
+        - handleCreateFlightPlan(in, out) : void
+        - handleCreateFromDsl(in, out) : void
+        - handleInsertWeather(in, out) : void
+        - handleValidateFlightPlan(in, out) : void
+        - handleListFlights(in, out) : void
+        - handleListWeather(in, out) : void
+        - sendOk(out) : void
+        ~ sendError(out, msg : String) : void
+        - sendData(out, data : String) : void
+        - writeString(out, s : String) : void
+        - readString(in) : String
+        ~ readFully(in, buf, off, len) : void
+    }
+
+    interface PilotSessionContext <<interface>> {
+        + createFlight(route, departure, registration) : Flight
+        + importPlanFromDsl(flightId, dslContent) : Flight
+        + attachWeather(flightId, assignments) : void
+        + validateFlightPlan(flightId) : FlightPlanTestResult
+        + flightsOfAuthenticatedPilot() : Iterable<Flight>
+        + allWeatherData() : Iterable<WeatherData>
+    }
+
+    class DefaultPilotSessionContext implements PilotSessionContext
+
+}
+
+package "eapli.aisafe.app.pilot.console.infrastructure.tcp.protocol" {
+
+    class TcpProtocol <<constants>> {
+        + {static} PORT : int = 5555
+        + {static} LOGIN : byte = 0x01
+        + {static} LOGOUT : byte = 0x02
+        + {static} CREATE_FLIGHT_PLAN : byte = 0x03
+        + {static} CREATE_FROM_DSL : byte = 0x04
+        + {static} INSERT_WEATHER : byte = 0x05
+        + {static} VALIDATE_FLIGHT_PLAN : byte = 0x06
+        + {static} LIST_FLIGHTS : byte = 0x07
+        + {static} LIST_WEATHER : byte = 0x08
+        + {static} RESPONSE_OK : byte = 0xF0
+        + {static} RESPONSE_ERROR : byte = 0xF1
+        + {static} RESPONSE_DATA : byte = 0xF2
+    }
+
+}
+
+package "eapli.aisafe.app.pilot.console.infrastructure.tcp.client" {
+
+    class PilotRemoteClient {
+        - scanner : Scanner
+        - output : PrintStream
+        + {static} main(args : String[]) : void
+        ~ connect(host : String, port : int) : void
+        ~ run(in : DataInputStream, out : DataOutputStream) : void
+        - sendLogin(out, in, username, password) : boolean
+        - runMenu(out, in) : void
+        - writeString(out, s : String) : void
+        - readString(in) : String
+        - readFully(in, buf, off, len) : void
+    }
+
+}
+
+package "eapli.aisafe.infrastructure.authz" {
+    interface CredentialHandler {
+        + authenticated(username, password, roles) : boolean
+    }
+    class AuthenticationCredentialHandler implements CredentialHandler
+}
+
+package "eapli.aisafe.flightmanagement.application" {
+    class CreateFlightController
+    class ImportFlightPlanController
+    class AttachWeatherToPlanController
+    class TestFlightPlanController
+}
+
+' Relationships
+PilotApp ..> PilotTcpServer : "starts as daemon Thread"
+PilotTcpServer ..> PilotConnectionHandler : "instantiates per connection"
+PilotConnectionHandler ..> TcpProtocol : "uses command codes"
+PilotConnectionHandler --> CredentialHandler : "authenticates via"
+PilotConnectionHandler --> PilotSessionContext : "delegates business ops"
+
+DefaultPilotSessionContext ..> CreateFlightController : "for CREATE_FLIGHT_PLAN"
+DefaultPilotSessionContext ..> ImportFlightPlanController : "for CREATE_FROM_DSL"
+DefaultPilotSessionContext ..> AttachWeatherToPlanController : "for INSERT_WEATHER"
+DefaultPilotSessionContext ..> TestFlightPlanController : "for VALIDATE_FLIGHT_PLAN"
+
+PilotRemoteClient ..> TcpProtocol : "uses command codes"
+
+note bottom of PilotSessionContext
+    Seam for testability: PilotConnectionHandler depends on
+    this interface so unit tests can inject a fake context
+    instead of hitting real controllers / persistence.
+end note
+
+@enduml

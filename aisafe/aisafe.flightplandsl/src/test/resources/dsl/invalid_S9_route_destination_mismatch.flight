@@ -1,0 +1,31 @@
+// Route destination does not match the last leg arrival airport.
+flight TP128 {
+  type: regular
+  route { origin: LPPR destination: LFPG }
+  leg 1 {
+    departure { airport: LPPR datetime: 2026-06-10T07:00 }
+    arrival { airport: LPPT datetime: 2026-06-10T08:00 }
+    fuel: 3200 kg
+    segments {
+      segment {
+        start: (41.24, -8.68)
+        end: (38.78, -9.13)
+        slots { slot { altitude: 9000 m width: 400 m } }
+        wind { direction: 180 speed: 10.0 m/s }
+      }
+    }
+  }
+  leg 2 {
+    departure { airport: LPPT datetime: 2026-06-10T09:30 }
+    arrival { airport: LEMD datetime: 2026-06-10T11:15 }
+    fuel: 4800 kg
+    segments {
+      segment {
+        start: (38.78, -9.13)
+        end: (40.49, -3.57)
+        slots { slot { altitude: 10500 m width: 500 m } }
+        wind { direction: 90 speed: 12.0 m/s }
+      }
+    }
+  }
+}

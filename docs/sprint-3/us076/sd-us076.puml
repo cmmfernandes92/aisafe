@@ -1,0 +1,41 @@
+@startuml sd-us076
+skinparam actorStyle awesome
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+autonumber
+
+title US076 – List pilot roster (realization)
+
+actor "Air Transport Company Collaborator" as A
+participant ":ListPilotController" as CTRL <<application>>
+participant ":AuthorizationService" as AUTH <<infrastructure>>
+participant ":CollaboratorRepository" as CR <<persistence>>
+participant ":PilotRepository" as PR <<persistence>>
+
+activate A
+
+A -> CTRL : listPilots()
+activate CTRL
+
+CTRL -> AUTH : loggedinUserWithPermission(ATCC)
+activate AUTH
+AUTH --> CTRL : user session
+deactivate AUTH
+note right of CTRL : authorization check (US076.4)
+
+CTRL -> CR : findByUser(currentUser)
+activate CR
+CR --> CTRL : collaborator
+deactivate CR
+
+CTRL -> PR : findByCompany(collaborator.company)
+activate PR
+PR --> CTRL : pilots
+deactivate PR
+
+CTRL --> A : pilot roster
+
+deactivate CTRL
+deactivate A
+
+@enduml

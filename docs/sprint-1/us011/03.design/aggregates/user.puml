@@ -1,0 +1,39 @@
+@startuml
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+left to right direction
+
+' ============================================
+' AGGREGATE: User
+' ============================================
+package "User Aggregate" {
+    class User <<aggregate root>> {
+        fullName
+        phone
+    }
+    enum Role <<value object>>
+    enum Status <<value object>>
+    class Email <<value object>>
+    class SecurityClearance <<value object>> {
+        expirationDate
+    }
+    class SkillsAssessment <<value object>> {
+        assessmentDate
+    }
+
+    User *-- Role
+    User *-- Status
+    User *-- Email
+    User *-- SecurityClearance
+    User *-- SkillsAssessment
+}
+
+@enduml

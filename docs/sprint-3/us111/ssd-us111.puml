@@ -1,0 +1,31 @@
+@startuml ssd-us111
+skinparam actorStyle awesome
+
+actor "Flight Control Operator" as FCO
+participant ":AISafe System" as System
+
+activate FCO
+
+FCO -> System : requestSimulationReport()
+activate System
+System --> FCO : ask for the simulation report file produced by the simulator
+deactivate System
+
+FCO -> System : provideSimulationReport(file)
+activate System
+System --> FCO : show summary (total flights, statuses, violations, PASS/FAIL) + ask where to store
+deactivate System
+
+FCO -> System : confirm(outputPath)
+activate System
+note right of System
+  Parse the simulator's report -> SimulationRun
+  (identified by run timestamp; flight count,
+  per-flight statuses, safety violations, PASS/FAIL).
+  Persist the aggregate and write the operator
+  summary report file.
+end note
+System --> FCO : operator summary report generated and stored at <path>
+deactivate System
+
+@enduml

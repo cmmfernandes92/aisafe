@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AISafe - Flight Routes</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260605-atcc-routes2">
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar(${activePage}, ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">US073</p>
+          <h1>Flight Routes</h1>
+          <p class="page-copy">Active flight routes operated by your company.</p>
+        </div>
+      </header>
+
+      <section class="areas-grid">
+        <article th:replace="~{fragments/table-card :: card(
+            'Registered Routes',
+            '/modules/air-transport-company/routes/table',
+            '#routes-tbody',
+            'Refresh routes',
+            ~{::#routes-head},
+            ~{fragments/routes :: rows})}">
+          <thead id="routes-head">
+          <tr>
+            <th>Route</th>
+            <th>Company</th>
+            <th>Company Name</th>
+            <th>Origin</th>
+            <th>Destination</th>
+            <th>Status</th>
+          </tr>
+          </thead>
+        </article>
+
+        <aside class="card form-card">
+          <div class="card-head">
+            <h2>Create Route</h2>
+            <span>POST /routes</span>
+          </div>
+          <div id="form-result"></div>
+          <form hx-post="/modules/air-transport-company/routes"
+                hx-target="#routes-tbody"
+                hx-swap="outerHTML"
+                class="stack">
+
+            <label>
+              <span>Route Name</span>
+              <input name="routeName" required maxlength="16"
+                     th:placeholder="${companyIata != null ? companyIata + '101' : 'TP101'}"
+                     hx-get="/modules/air-transport-company/routes/check-name"
+                     hx-trigger="blur changed delay:200ms"
+                     hx-target="#name-feedback"
+                     hx-swap="innerHTML"
+                     hx-include="[name='routeName']"
+                     oninput="this.value=this.value.toUpperCase()">
+              <div id="name-feedback"></div>
+            </label>
+
+            <label>
+              <span>Origin Airport</span>
+              <select name="originCode" required>
+                <option value="">Select origin airport</option>
+                <option th:each="airport : ${airports}"
+                        th:value="${airport.iataCode()}"
+                        th:text="|${airport.iataCode()} - ${airport.airportName()}|">LIS - Humberto Delgado</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Destination Airport</span>
+              <select name="destinationCode" required>
+                <option value="">Select destination airport</option>
+                <option th:each="airport : ${airports}"
+                        th:value="${airport.iataCode()}"
+                        th:text="|${airport.iataCode()} - ${airport.airportName()}|">OPO - Francisco Sá Carneiro</option>
+              </select>
+            </label>
+
+            <div id="route-error"></div>
+            <button type="submit">Create Route</button>
+          </form>
+        </aside>
+      </section>
+    </main>
+  </div>
+  <script src="/js/sidebar.js?v=20260605-atcc-routes2"></script>
+  <script src="/js/sortable-table.js"></script>
+</body>
+</html>

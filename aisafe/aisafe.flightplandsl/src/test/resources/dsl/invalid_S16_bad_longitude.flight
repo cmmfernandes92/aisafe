@@ -1,0 +1,18 @@
+// Longitude must be in [-180, 180]; here we use 200.
+flight TP161 {
+  type: regular
+  route { origin: LPPT destination: LFPG }
+  leg 1 {
+    departure { airport: LPPT datetime: 2026-05-20T08:30 }
+    arrival { airport: LFPG datetime: 2026-05-20T11:45 }
+    fuel: 8500 kg
+    segments {
+      segment {
+        start: (38.78, 200.0)
+        end: (48.99, 2.55)
+        slots { slot { altitude: 10000 m width: 500 m } }
+        wind { direction: 270 speed: 15.5 m/s }
+      }
+    }
+  }
+}

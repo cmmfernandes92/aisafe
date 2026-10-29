@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<form th:fragment="form(resultsPath, areas)" th:attr="hx-get=${resultsPath}"
+      hx-target="#weather-consult-results" hx-swap="outerHTML" class="stack">
+  <label>
+    <span>Air Control Area</span>
+    <select name="areaCode" required>
+      <option value="">Select area</option>
+      <option th:each="area : ${areas}" th:value="${area.code()}"
+              th:text="|${area.code()} - ${area.name()}|">LPPC - Lisbon ACC</option>
+    </select>
+    <p class="field-note" th:if="${#lists.isEmpty(areas)}">
+      No air control areas are available.
+    </p>
+  </label>
+
+  <label>
+    <span>Day</span>
+    <input name="day" type="date" required>
+  </label>
+
+  <button type="submit">Consult Weather Data</button>
+</form>
+
+<div th:fragment="rows(rows)" id="weather-consult-results">
+  <div class="alert error" th:if="${message != null}" th:text="${message}">
+    Air control area not found.
+  </div>
+
+  <table class="sortable-table">
+    <thead>
+    <tr>
+      <th>Period</th>
+      <th>Area</th>
+      <th>Temp C</th>
+      <th>Pres hPa</th>
+      <th>Vis m</th>
+      <th>Wind kt</th>
+      <th>Dir deg</th>
+      <th>Source</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="row : ${rows}">
+      <td class="mono" th:text="${row.period()}">2026-06-12 10:00 -> 2026-06-12 11:00</td>
+      <td class="mono" th:text="${row.areaCode()}">LPPC</td>
+      <td class="mono" th:text="${row.temperature()}">19.4</td>
+      <td class="mono" th:text="${row.pressure()}">1014.5</td>
+      <td class="mono" th:text="${row.visibility()}">10000</td>
+      <td class="mono" th:text="${row.windSpeed()}">14.0</td>
+      <td class="mono" th:text="${row.windDirection()}">270</td>
+      <td th:text="${row.dataSource()}">IPMA</td>
+    </tr>
+    <tr th:if="${rows == null || #lists.isEmpty(rows)}">
+      <td colspan="8" class="empty"
+          th:text="${message != null ? 'Adjust the selected area/day and try again.' : 'No weather data for the selected area and day.'}">
+        No weather data for the selected area and day.
+      </td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>

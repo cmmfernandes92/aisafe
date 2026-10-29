@@ -1,0 +1,183 @@
+@startuml cd-us074
+title US074 — Class Diagram: Deactivate a Flight Route
+
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam linetype ortho
+skinparam PackagePadding 10
+skinparam classPadding 6
+
+' ─────────────────────────────────────────────
+' PRESENTATION LAYER
+' ─────────────────────────────────────────────
+package "aisafe.app.atcc.console\n(Presentation)" #EAF4FB {
+
+    class DeactivateFlightRouteAction {
+        + execute() : void
+    }
+
+    class DeactivateFlightRouteUI {
+        - controller : DeactivateFlightRouteController
+        --
+        + doShow() : boolean
+        - listActiveRoutes() : void
+        - readRouteName() : String
+        - readEffectiveDate() : LocalDate
+    }
+
+    DeactivateFlightRouteAction ..> DeactivateFlightRouteUI : «creates»
+}
+
+' ─────────────────────────────────────────────
+' APPLICATION LAYER
+' ─────────────────────────────────────────────
+package "aisafe.core / flightroutemanagement.application\n(Application)" #EBF5EB {
+
+    class DeactivateFlightRouteController {
+        - authz : AuthorizationService
+        - routeRepository : FlightRouteRepository
+        - flightRepository : FlightRepository
+        - companyRepository : AirTransportCompanyRepository
+        - collaboratorRepository : CollaboratorRepository
+        - userRepository : UserRepository
+        --
+        + activeRoutesOfMyCompany() : Iterable<FlightRoute>
+        + deactivateFlightRoute(\n  routeName : String,\n  effectiveDate : LocalDate\n) : FlightRoute
+        - resolveCompany() : AirTransportCompany
+    }
+}
+
+' ─────────────────────────────────────────────
+' DOMAIN LAYER
+' ─────────────────────────────────────────────
+package "aisafe.core\n(Domain)" #FEF9E7 {
+
+    package "flightroutemanagement.domain" {
+
+        class FlightRoute <<Entity / Aggregate Root>> {
+            - routeName : RouteName
+            - company : AirTransportCompany
+            - origin : Airport
+            - destination : Airport
+            - active : boolean = true
+            - deactivatedFrom : LocalDate
+            - version : Long
+            --
+            + routeName() : RouteName
+            + company() : AirTransportCompany
+            + isActive() : boolean
+            + deactivatedFrom() : LocalDate
+            + deactivate(from : LocalDate) : void
+        }
+
+        class RouteName <<Value Object>> {
+            - value : String
+            --
+            {static} + valueOf(value : String) : RouteName
+            + value() : String
+        }
+
+        interface FlightRouteRepository <<Repository>> {
+            + save(route : FlightRoute) : FlightRoute
+            + ofIdentity(name : RouteName) : Optional<FlightRoute>
+            + existsByName(name : RouteName) : boolean
+            + findByCompany(\n  company : AirTransportCompany\n) : Iterable<FlightRoute>
+            + findActiveByCompany(\n  company : AirTransportCompany\n) : Iterable<FlightRoute>
+        }
+
+        FlightRoute *-- RouteName : routeName
+    }
+
+    package "flightmanagement.repositories\n(from US080)" #EBEBEB {
+
+        interface FlightRepository <<Repository>> {
+            + existsForRouteOnDate(\n  route : RouteName,\n  date : LocalDate\n) : boolean
+            + existsForRouteOnOrAfter(\n  route : RouteName,\n  date : LocalDate\n) : boolean
+        }
+    }
+
+    package "airtransportcompanymanagement.domain\n(existing — US060)" #EBEBEB {
+        class AirTransportCompany <<Entity / Aggregate Root>> {
+            + iataCode() : CompanyIATACode
+            + icaoCode() : CompanyICAOCode
+        }
+        interface AirTransportCompanyRepository <<Repository>> {
+            + findByIataCode(code) : Optional<AirTransportCompany>
+        }
+    }
+
+    FlightRoute "1" --> "1" AirTransportCompany : company\n(ref by identity)
+
+    note bottom of FlightRoute
+        US074 invariant enforced by deactivate():
+          - route must be currently active
+          - sets active = false
+          - records deactivatedFrom = from
+        AC2 (no planned flights on/after date)
+        is a cross-aggregate rule enforced
+        by the controller via FlightRepository,
+        before calling deactivate().
+    end note
+
+    note bottom of FlightRepository
+        existsForRouteOnOrAfter backs AC2.
+        "Planned flight" = any Flight on the
+        route departing on or after the date.
+        Query is DB-side (JPQL), not in-Java.
+    end note
+}
+
+' ─────────────────────────────────────────────
+' PERSISTENCE LAYER
+' ─────────────────────────────────────────────
+package "aisafe.persistence.impl\n(Infrastructure)" #FAE5E5 {
+
+    class JpaFlightRouteRepository <<JPA Repository>> {
+        + save(route : FlightRoute) : FlightRoute
+        + ofIdentity(name : RouteName) : Optional<FlightRoute>
+        + existsByName(name : RouteName) : boolean
+        + findByCompany(\n  company : AirTransportCompany\n) : Iterable<FlightRoute>
+        + findActiveByCompany(\n  company : AirTransportCompany\n) : Iterable<FlightRoute>
+    }
+
+    class InMemoryFlightRouteRepository <<InMemory Repository>> {
+        + findActiveByCompany(\n  company : AirTransportCompany\n) : Iterable<FlightRoute>
+    }
+
+    class JpaFlightRepository <<JPA Repository>> {
+        + existsForRouteOnDate(...) : boolean
+        + existsForRouteOnOrAfter(...) : boolean
+    }
+
+    class InMemoryFlightRepository <<InMemory Repository>> {
+        + existsForRouteOnDate(...) : boolean
+        + existsForRouteOnOrAfter(...) : boolean
+    }
+
+    JpaFlightRouteRepository ..|> FlightRouteRepository
+    InMemoryFlightRouteRepository ..|> FlightRouteRepository
+    JpaFlightRepository ..|> FlightRepository
+    InMemoryFlightRepository ..|> FlightRepository
+}
+
+' ─────────────────────────────────────────────
+' LAYER RELATIONSHIPS
+' ─────────────────────────────────────────────
+DeactivateFlightRouteUI --> DeactivateFlightRouteController : uses
+DeactivateFlightRouteController --> FlightRouteRepository : uses
+DeactivateFlightRouteController --> FlightRepository : uses (AC2 guard)
+DeactivateFlightRouteController --> AirTransportCompanyRepository : uses
+DeactivateFlightRouteController ..> FlightRoute : «mutates via deactivate()»
+
+note bottom of DeactivateFlightRouteController
+    DIP: depends on repository interfaces,
+    not JPA implementations.
+    FlightRepository injected directly —
+    same pattern as other controllers that
+    read from external aggregates.
+    Ownership check and AC2 guard live here
+    (cross-aggregate/authorization rules
+    cannot live in FlightRoute).
+end note
+
+@enduml

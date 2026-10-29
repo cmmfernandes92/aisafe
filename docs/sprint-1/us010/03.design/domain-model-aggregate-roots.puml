@@ -1,0 +1,70 @@
+@startuml
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+left to right direction
+
+class Maker <<aggregate root>>
+class AircraftModel <<aggregate root>>
+class EngineModel <<aggregate root>>
+class User <<aggregate root>>
+class CompanyCollaborator <<aggregate root>>
+class Pilot <<aggregate root>>
+class Aircraft <<aggregate root>>
+class AirControlArea <<aggregate root>>
+class Airport <<aggregate root>>
+class AirTransportCompany <<aggregate root>>
+class FlightRoute <<aggregate root>>
+class Flight <<aggregate root>>
+class WeatherData <<aggregate root>>
+class SimulationRun <<aggregate root>>
+
+' Maker
+AircraftModel --> Maker : manufactured by
+EngineModel --> Maker : manufactured by
+
+' AircraftModel <-> EngineModel
+AircraftModel --> "1..*" EngineModel : certified engines
+
+' CompanyCollaborator
+CompanyCollaborator --> AirTransportCompany : belongs to
+CompanyCollaborator --> User : identity
+
+' Pilot
+Pilot --> AirTransportCompany : belongs to
+Pilot --> User : identity
+Pilot --> "1..*" AircraftModel : certified for
+
+' Aircraft
+Aircraft --> AircraftModel : is of model
+Aircraft --> EngineModel : uses
+Aircraft --> AirTransportCompany : belongs to
+
+' Airport
+Airport --> AirControlArea : located in
+
+' FlightRoute
+FlightRoute --> "2" Airport : origin, destination
+FlightRoute --> AirTransportCompany : belongs to
+
+' Flight
+Flight --> FlightRoute : for route
+Flight --> Aircraft : uses
+Flight --> Pilot : assigned to
+Flight --> AirTransportCompany : belongs to
+
+' WeatherData
+WeatherData --> AirControlArea : for area
+
+' SimulationRun
+SimulationRun --> "1..*" Flight : includes flights
+SimulationRun --> WeatherData : uses weather
+
+@enduml

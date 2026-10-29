@@ -1,0 +1,85 @@
+@startuml
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+autonumber
+
+title Register Aircraft
+
+actor "Air Transport Company Collaborator" as ATCC
+participant ":AircraftUI" as UI <<presentation>>
+participant ":CreateAircraftController" as C <<application>>
+participant ":AirTransportCompanyRepository" as ATCR <<persistence>>
+participant ":AircraftModelRepository" as AMR <<persistence>>
+participant ":EngineModelRepository" as EMR <<persistence>>
+participant ":AircraftRepository" as AR <<persistence>>
+participant ":Registration" as REG <<domain>>
+participant ":CabinConfiguration" as CC <<domain>>
+participant ":Aircraft" as A <<domain>>
+
+activate ATCC
+
+ATCC -> UI : asks to register\nan aircraft
+activate UI
+UI --> ATCC : requests aircraft data
+deactivate UI
+
+ATCC -> UI : enters companyId, aircraftModelId,\nengineModelId, registration,\nregistrationCountry, crewCount,\noperationalStatus, cabinConfiguration
+activate UI
+UI -> C : createAircraft(companyId, aircraftModelId,\nengineModelId, registration,\nregistrationCountry, crewCount,\noperationalStatus, cabinConfiguration)
+activate C
+
+C -> ATCR : ofIdentity(companyId)
+activate ATCR
+ATCR --> C : airTransportCompany
+deactivate ATCR
+
+C -> AMR : ofIdentity(aircraftModelId)
+activate AMR
+AMR --> C : aircraftModel
+deactivate AMR
+
+C -> EMR : ofIdentity(engineModelId)
+activate EMR
+EMR --> C : engineModel
+deactivate EMR
+
+C -> REG ** : create(registration)
+note right of REG
+  Validates (Information Expert):
+  - registration format is valid
+end note
+
+C -> AR : containsOfIdentity(registrationVO)
+activate AR
+AR --> C : false
+deactivate AR
+
+C -> CC ** : create(cabinConfiguration)
+note right of CC
+  Validates (Information Expert):
+  - seat counts are valid
+  - seat totals are consistent
+end note
+
+C -> A ** : create(registrationVO,\nregistrationCountry, crewCount,\noperationalStatus, cabinConfigurationVO,\naircraftModel, engineModel,\nairTransportCompany)
+note right of A
+  Validates (Information Expert):
+  - aircraft belongs to exactly one company
+  - aircraft is of exactly one model
+  - engine model is certified\n    for the aircraft model
+  - cabin configuration does not exceed\n    aircraft model capacity
+  - operational status is valid
+end note
+
+C -> AR : save(aircraft)
+activate AR
+AR --> C : aircraft
+deactivate AR
+
+C --> UI : aircraft
+deactivate C
+
+UI --> ATCC : shows successful registration
+deactivate UI
+deactivate ATCC
+@enduml

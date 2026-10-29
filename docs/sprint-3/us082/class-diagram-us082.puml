@@ -1,0 +1,97 @@
+@startuml class-diagram-us082
+title US082 - Attach Weather to Flight Plan (class diagram)
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor      #5B9BD5
+skinparam packageStyle           rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor     #888888
+skinparam defaultFontSize        11
+hide empty members
+
+package "Presentation - aisafe.app.pilot.console" {
+    class AttachWeatherToPlanUI <<presentation>> {
+        +show()
+    }
+
+    class AttachWeatherToPlanAction <<Command>>
+
+    AttachWeatherToPlanAction ..> AttachWeatherToPlanUI : creates
+}
+
+package "Application - aisafe.core" {
+    class AttachWeatherToPlanController <<Controller>> {
+        +attachWeather(flightId, weatherMap)
+    }
+}
+
+package "Domain - aisafe.core" {
+    class Flight <<aggregate root>> {
+        +pilot()
+        +currentPlan() : FlightPlan
+        +attachWeatherToCurrentPlan(weatherMap)
+    }
+
+    class FlightPlan <<entity>> {
+        -status : FlightPlanStatus
+        -weatherAssignments : List<WeatherAssignment>
+        +attachWeather(weatherMap)
+        +weatherAssignmentsBySegment() : Map<SegmentKey, WeatherDataId>
+        +status()
+    }
+
+    class WeatherAssignment <<embeddable>> {
+        -legNumber : int
+        -segmentIndex : int
+        -weatherDataId : String
+    }
+
+    class SegmentKey <<value object>> {
+        -legNumber : int
+        -segmentIndex : int
+        +of(legNumber, segmentIndex) : SegmentKey
+    }
+
+    class WeatherDataId <<value object>>
+
+    enum FlightPlanStatus <<enum>> {
+        DRAFT
+        VALIDATED
+        TESTED
+    }
+
+    Flight *-- "1..*" FlightPlan
+    FlightPlan *-- "0..*" WeatherAssignment
+    FlightPlan --> FlightPlanStatus
+    FlightPlan ..> SegmentKey : keyed by
+    FlightPlan ..> WeatherDataId : assigns
+    WeatherAssignment ..> SegmentKey : stores ordinals
+    WeatherAssignment ..> WeatherDataId : stores id string
+}
+
+package "External repositories (interfaces only)" #EEEEEE {
+    interface FlightRepository <<repository>> {
+        +ofIdentity(flightId)
+        +save(flight)
+    }
+
+    interface WeatherDataRepository <<repository>> {
+        +findAll()
+        +ofIdentity(weatherDataId)
+    }
+
+    class WeatherData <<aggregate root>> <<external>>
+}
+
+AttachWeatherToPlanUI ..> AttachWeatherToPlanController
+AttachWeatherToPlanUI ..> FlightRepository : loads selected flight
+AttachWeatherToPlanUI ..> WeatherDataRepository : lists registered forecasts
+
+AttachWeatherToPlanController ..> FlightRepository : load/save
+AttachWeatherToPlanController ..> WeatherDataRepository : verify id exists
+AttachWeatherToPlanController ..> Flight : modifies aggregate root
+
+WeatherDataRepository ..> WeatherData
+
+@enduml

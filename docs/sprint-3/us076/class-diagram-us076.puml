@@ -1,0 +1,105 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #F4F6F7
+skinparam classBorderColor #2E86C1
+skinparam classFontColor #1B2631
+hide empty members
+
+title US076 - List Pilot (Class Diagram)
+
+' =========================
+' CONTROLLER
+' =========================
+class ListPilotController {
+    + listPilots() : Iterable<Pilot>
+}
+
+' =========================
+' REPOSITORIES
+' =========================
+interface PilotRepository {
+    + findAllByCompanyCode(companyCode) : Iterable<Pilot>
+}
+
+interface UserRepository {
+    + findBySystemUser(systemUser) : Optional<User>
+}
+
+interface CollaboratorRepository {
+    + findCompanyCollaboratorByEmail(email) : Optional<CompanyCollaborator>
+}
+
+interface AirTransportCompanyRepository {
+    + findByIataCode(code) : Optional<AirTransportCompany>
+}
+
+' =========================
+' DOMAIN
+' =========================
+class Pilot {
+    + identity() : Email
+    + companyCode() : CompanyIATACode
+    + certifications() : Set<AircraftModel>
+    + status() : PilotStatus
+}
+
+class Email
+class CompanyIATACode
+class AircraftModel
+
+enum PilotStatus {
+    ACTIVE
+    INACTIVE
+}
+
+' =========================
+' USER / COLLABORATOR
+' =========================
+class User {
+    + identity() : Email
+}
+
+class CompanyCollaborator {
+    + companyCode() : CompanyIATACode
+}
+
+' =========================
+' AUTH
+' =========================
+class AuthorizationService {
+    + session()
+}
+
+class SystemUser
+
+' =========================
+' RELATIONSHIPS
+' =========================
+
+ListPilotController --> PilotRepository
+ListPilotController --> UserRepository
+ListPilotController --> CollaboratorRepository
+ListPilotController --> AirTransportCompanyRepository
+
+ListPilotController --> AuthorizationService
+
+PilotRepository --> Pilot
+
+UserRepository --> User
+CollaboratorRepository --> CompanyCollaborator
+AirTransportCompanyRepository --> AirTransportCompany
+
+Pilot --> Email
+Pilot --> CompanyIATACode
+Pilot --> AircraftModel
+Pilot --> PilotStatus
+
+User --> Email
+CompanyCollaborator --> CompanyIATACode
+
+AuthorizationService --> SystemUser
+User --> SystemUser
+
+class AirTransportCompany
+
+@enduml

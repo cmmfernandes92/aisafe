@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <title>AISafe - Simulation Reports</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260613-sim-report">
+  <style>
+    .sim-mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+    .sim-card { background: linear-gradient(180deg, rgba(30,41,59,.55) 0%, rgba(19,28,54,.55) 100%); border: 1px solid rgba(58,70,100,.4); }
+    .sim-row { position: relative; }
+    .sim-row::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--rc); box-shadow:0 0 12px 0 var(--rc); opacity:.85; border-top-left-radius:10px; border-bottom-left-radius:10px; }
+    .sim-grid { display:grid; grid-template-columns: minmax(0,1fr) 340px; gap:1.5rem; align-items:start; }
+    @media (max-width: 900px) { .sim-grid { grid-template-columns: 1fr; } }
+    .gen-select { background:#0B1120; border:1px solid rgba(58,70,100,.6); border-radius:7px; color:#e5ecf7; padding:.5rem; font-size:.72rem; width:100%; }
+    .gen-btn { background:linear-gradient(90deg,#00E5FF 0%,#7B61FF 55%,#FF4D9D 100%); color:#070B14; font-weight:600; border:none; border-radius:7px; padding:.6rem; font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; }
+    .gen-btn:hover { filter:brightness(1.1); }
+  </style>
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar('simulation-report', ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Flight Control · US109 / US111</p>
+          <h1>Simulation Reports</h1>
+          <p class="page-copy">Persisted validation records of terminated area-simulation runs, read from the database.</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:1rem;">
+          <span class="sim-mono" style="font-size:.7rem;color:#64748b;text-transform:uppercase;letter-spacing:.12em;"
+                th:text="${#lists.size(runs)} + ' persisted'">0 persisted</span>
+          <a class="refresh-action" th:href="@{/modules/flight-control/simulation-report}"
+             aria-label="Refresh simulation reports" title="Refresh">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M20 11a8 8 0 1 0-2.3 5.7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M20 4v7h-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="refresh-text">Refresh</span>
+          </a>
+        </div>
+      </header>
+
+      <div th:if="${message != null}" th:class="${ok} ? 'alert ok' : 'alert error'" role="status"
+           th:text="${message}" style="margin-bottom:1rem;">Done.</div>
+
+      <section class="sim-grid">
+        <!-- LEFT: persisted reports (compact) -->
+        <div style="display:flex;flex-direction:column;gap:.5rem;">
+          <div th:if="${#lists.isEmpty(runs)}" class="sim-card sim-mono"
+               style="padding:1.25rem;border-radius:10px;color:#94a3b8;font-size:.8rem;">
+            No simulation reports persisted yet — generate one from a run folder using the form on the right.
+          </div>
+
+          <div th:each="run : ${runs}" th:style="'--rc:' + ${run.color()}"
+               class="sim-row sim-card"
+               style="display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:1.4rem;align-items:center;
+                      padding:.75rem 1.1rem .75rem 2.75rem;border-radius:10px;">
+            <span th:style="'width:10px;height:10px;border-radius:50%;background:' + ${run.color()} + ';box-shadow:0 0 12px ' + ${run.color()}"></span>
+
+            <div style="min-width:0;">
+              <!-- PRIMARY: what to read first — the area and the sim run -->
+              <div style="display:flex;align-items:baseline;gap:.65rem;flex-wrap:wrap;">
+                <span style="font:600 .98rem Inter,sans-serif;color:#e5ecf7;letter-spacing:.02em;"
+                      th:text="${run.area()}">LPPC</span>
+                <span class="sim-mono" style="font-size:.8rem;color:#94a3b8;" th:text="${run.timestamp()}">2026-02-26 16:10</span>
+              </div>
+              <!-- SECONDARY: outcome + counts -->
+              <div class="sim-mono" style="font-size:.68rem;margin-top:.35rem;display:flex;align-items:center;gap:.3rem 1rem;flex-wrap:wrap;">
+                <span style="display:inline-flex;align-items:baseline;gap:.45rem;">
+                  <span style="color:#94a3b8;letter-spacing:.04em;"
+                        th:text="${#strings.replace(run.endReason(),'_',' ').toUpperCase()}">COMPLETED</span>
+                  <span style="font-weight:700;letter-spacing:.06em;" th:style="'color:' + ${run.color()}"
+                        th:text="${run.verdict()}">PASS</span>
+                </span>
+                <span><span style="color:#475569;">FLIGHTS</span> <span style="color:#94a3b8;" th:text="${run.flights()}">0</span></span>
+                <span><span style="color:#475569;">VIOLATIONS</span> <span th:style="'color:' + ${run.color()}" th:text="${run.violations()}">0</span></span>
+              </div>
+            </div>
+
+            <a th:href="@{/modules/flight-control/simulation-report/{id}(id=${run.id()})}"
+               class="sim-mono"
+               style="display:inline-flex;align-items:center;gap:.4rem;white-space:nowrap;text-decoration:none;
+                      font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#cbd5e1;
+                      border:1px solid rgba(58,70,100,.7);border-radius:7px;padding:.45rem .7rem;background:rgba(11,17,32,.6);">
+              View Report
+              <svg width="12" height="12" viewBox="0 0 13 13" fill="none"><path d="M3 6.5h6M7 4l2.5 2.5L7 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- RIGHT: generate + persist form -->
+        <aside class="sim-card" style="padding:1.1rem 1.2rem;border-radius:10px;align-self:start;">
+          <h2 style="font:600 1rem Inter,sans-serif;color:#e5ecf7;margin:0 0 .35rem;">Generate Report</h2>
+          <p class="sim-mono" style="font-size:.66rem;color:#64748b;line-height:1.55;margin-bottom:.9rem;">
+            Pick a finished simulation run. Its <span style="color:#94a3b8;">report.txt</span> is parsed by the FCO
+            <span style="color:#94a3b8;">Generate Simulation Report</span> use case and persisted to the database.
+          </p>
+          <form method="post" th:action="@{/modules/flight-control/simulation-report/generate}"
+                style="display:flex;flex-direction:column;gap:.7rem;">
+            <label style="display:flex;flex-direction:column;gap:.35rem;font-size:.62rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;">
+              Run folder
+              <select name="runId" class="gen-select sim-mono">
+                <option th:if="${#lists.isEmpty(runFolders)}" disabled>No run folders found — run a simulation first</option>
+                <option th:each="r : ${runFolders}" th:value="${r.id()}"
+                        th:text="${r.id()} + '  ·  ' + ${r.verdict()} + ' · ' + ${r.violations()} + ' viol'">folder</option>
+              </select>
+            </label>
+            <button type="submit" class="gen-btn" th:disabled="${#lists.isEmpty(runFolders)}">Generate &amp; Persist</button>
+          </form>
+        </aside>
+      </section>
+    </main>
+  </div>
+  <script src="/js/sidebar.js"></script>
+</body>
+</html>

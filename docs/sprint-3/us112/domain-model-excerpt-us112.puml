@@ -1,0 +1,81 @@
+@startuml domain-model-excerpt-us112
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>>     #95A5A6
+    FontColor<<external>>       #1A1A1A
+    BackgroundColor<<new>>      #D5F5E3
+    BorderColor<<new>>          #58D68D
+}
+
+package "Reporting Domain (US112)" {
+    class MonthlyReportPeriod <<value object>> {
+        + year : int  {>= 2000}
+        + month : int {1..12}
+    }
+
+    class MonthlyReportData <<DTO record>> {
+        + period : MonthlyReportPeriod
+        + totalFlights : int
+        + totalViolations : int
+        + totalSimulations : int
+        + topRoutes : List
+        + topCompanies : List
+        + violationsByArea : List
+        + evolution : List
+    }
+
+    interface MonthlyStatisticsRepository <<repository>> {
+        + countFlights(period) : int
+        + countViolations(period) : int
+        + countSimulations(period) : int
+        + topRoutesByFlights(period, n) : List
+        + topCompaniesByFlights(period, n) : List
+        + violationsByArea(period) : List
+        + monthlyEvolution(period, n) : List
+    }
+
+    interface MonthlyReportGenerator <<strategy>> {
+        + generate(data, outputPath) : void
+        + fileExtension() : String
+    }
+
+    MonthlyReportData *-- MonthlyReportPeriod
+
+    note right of MonthlyReportPeriod
+        Invariants enforced in constructor:
+        - year >= 2000
+        - month in 1..12
+        label() returns "May 2026" style
+        string used in report header.
+    end note
+
+    note right of MonthlyStatisticsRepository
+        CQRS-lite: read-only projections
+        (DTOs), never loads or modifies
+        aggregates directly.
+    end note
+}
+
+' External aggregates (not modified by this US)
+class Flight <<aggregate root>> <<external>>
+class FlightRoute <<aggregate root>> <<external>>
+class SimulationRun <<aggregate root>> <<external>>
+class AirControlArea <<aggregate root>> <<external>>
+
+MonthlyStatisticsRepository ..> Flight : queries (read-only)
+MonthlyStatisticsRepository ..> FlightRoute : queries (read-only)
+MonthlyStatisticsRepository ..> SimulationRun : queries (read-only)
+MonthlyStatisticsRepository ..> AirControlArea : queries (read-only)
+MonthlyReportGenerator ..> MonthlyReportData : renders
+
+@enduml

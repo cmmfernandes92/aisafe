@@ -1,0 +1,188 @@
+@startuml class-diagram-us073
+title US073 — Class Diagram: Create a Flight Route
+
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam linetype ortho
+skinparam PackagePadding 10
+skinparam classPadding 6
+
+' ─────────────────────────────────────────────
+' PRESENTATION LAYER
+' ─────────────────────────────────────────────
+package "aisafe.app.atcc.console\n(Presentation)" #EAF4FB {
+
+    class CreateFlightRouteAction {
+        + execute() : void
+    }
+
+    class CreateFlightRouteUI {
+        - controller : CreateFlightRouteController
+        --
+        + doShow() : boolean
+        - askRouteName() : String
+        - askAirportCode(prompt: String) : String
+    }
+
+    CreateFlightRouteAction ..> CreateFlightRouteUI : «creates»
+}
+
+' ─────────────────────────────────────────────
+' APPLICATION LAYER
+' ─────────────────────────────────────────────
+package "aisafe.app.atcc.application\n(Application)" #EBF5EB {
+
+    class CreateFlightRouteController {
+        - authz : AuthorizationService
+        - routeRepository : FlightRouteRepository
+        - airportRepository : AirportRepository
+        - companyRepository : AirTransportCompanyRepository
+        - collaboratorRepository : CollaboratorRepository
+        - userRepository : UserRepository
+        --
+        + createFlightRoute(\n  routeName : String,\n  originCode : String,\n  destinationCode : String\n) : FlightRoute
+        - resolveCompany() : AirTransportCompany
+        - resolveAirport(code : String) : Airport
+    }
+}
+
+' ─────────────────────────────────────────────
+' DOMAIN LAYER
+' ─────────────────────────────────────────────
+package "aisafe.core\n(Domain)" #FEF9E7 {
+
+    package "flightroutemanagement.domain" {
+
+        class FlightRoute <<Entity / Aggregate Root>> {
+            - surrogateId : Long
+            - routeName : RouteName
+            - active : boolean = true
+            - version : Long
+            --
+            + FlightRoute(\n  name : RouteName,\n  company : AirTransportCompany,\n  origin : Airport,\n  destination : Airport\n)
+            + routeName() : RouteName
+            + company() : AirTransportCompany
+            + origin() : Airport
+            + destination() : Airport
+            + isActive() : boolean
+            + deactivate() : void
+        }
+
+        class RouteName <<Value Object>> {
+            - value : String
+            {static} - PATTERN : Pattern = [A-Z]{2}[0-9]{1,4}
+            --
+            + RouteName(value : String)
+            {static} + valueOf(value : String) : RouteName
+            + value() : String
+            + equals(o : Object) : boolean
+            + hashCode() : int
+            + toString() : String
+        }
+
+        interface FlightRouteRepository <<Repository>> {
+            + save(route : FlightRoute) : FlightRoute
+            + existsByName(name : RouteName) : boolean
+            + findByCompany(\n  company : AirTransportCompany\n) : Iterable<FlightRoute>
+            + ofIdentity(name : RouteName) : Optional<FlightRoute>
+            + findAll() : Iterable<FlightRoute>
+        }
+
+        FlightRoute *-- RouteName : routeName
+    }
+
+    package "airtransportcompanymanagement.domain\n(existing — US060)" #EBEBEB {
+        class AirTransportCompany <<Entity / Aggregate Root>> {
+            + name() : CompanyName
+            + iataCode() : CompanyIATACode
+            + icaoCode() : CompanyICAOCode
+        }
+        class CompanyIATACode <<Value Object>> {
+            + value() : String
+        }
+        interface AirTransportCompanyRepository <<Repository>> {
+            + findByIataCode(code : CompanyIATACode) : Optional<AirTransportCompany>
+        }
+        AirTransportCompany *-- CompanyIATACode : iataCode
+    }
+
+    package "airportmanagement.domain\n(existing — US052)" #EBEBEB {
+        class Airport <<Entity / Aggregate Root>> {
+            + iataCode() : AirportIATACode
+            + icaoCode() : AirportICAOCode
+            + name() : String
+            + coordinates() : Coordinates
+        }
+        interface AirportRepository <<Repository>> {
+            + findByIataCode(code : AirportIATACode) : Optional<Airport>
+            + findByIcaoCode(code : AirportICAOCode) : Optional<Airport>
+            + findAll() : Iterable<Airport>
+        }
+    }
+
+    package "customercollaboratormanagement.repositories\n(existing — US060)" #EBEBEB {
+        interface CollaboratorRepository <<Repository>> {
+            + findCompanyCollaboratorByEmail(\n  email : Email\n) : Optional<Collaborator>
+        }
+    }
+
+    package "usermanagement.repositories\n(existing — US001)" #EBEBEB {
+        interface UserRepository <<Repository>> {
+            + findBySystemUser(user : SystemUser) : Optional<AisafeUser>
+        }
+    }
+
+    ' cross-aggregate references (no composition — just associations by identity)
+    FlightRoute "1" --> "1" AirTransportCompany : company\n(ref by identity)
+    FlightRoute "1" --> "1" Airport : origin\n(ref by identity)
+    FlightRoute "1" --> "1" Airport : destination\n(ref by identity)
+}
+
+' ─────────────────────────────────────────────
+' PERSISTENCE LAYER
+' ─────────────────────────────────────────────
+package "aisafe.persistence.impl\n(Infrastructure)" #FAE5E5 {
+
+    class JpaFlightRouteRepository <<JPA Repository>> {
+        --
+        + save(route : FlightRoute) : FlightRoute
+        + existsByName(name : RouteName) : boolean
+        + findByCompany(\n  company : AirTransportCompany\n) : Iterable<FlightRoute>
+        + ofIdentity(name : RouteName) : Optional<FlightRoute>
+        + findAll() : Iterable<FlightRoute>
+    }
+
+    JpaFlightRouteRepository ..|> FlightRouteRepository
+}
+
+' ─────────────────────────────────────────────
+' LAYER RELATIONSHIPS
+' ─────────────────────────────────────────────
+CreateFlightRouteUI --> CreateFlightRouteController : uses
+CreateFlightRouteController ..> FlightRoute : «creates»
+CreateFlightRouteController ..> RouteName : «creates»
+CreateFlightRouteController --> FlightRouteRepository : uses
+CreateFlightRouteController --> AirTransportCompanyRepository : uses
+CreateFlightRouteController --> AirportRepository : uses
+CreateFlightRouteController --> CollaboratorRepository : uses
+CreateFlightRouteController --> UserRepository : uses
+
+note bottom of CreateFlightRouteController
+  DIP: depends on repository interfaces,
+  not on JPA implementations.
+  IATA prefix check lives here (cross-aggregate
+  consistency — cannot live in FlightRoute).
+end note
+
+note bottom of RouteName
+  SRP: only enforces format rule
+  [A-Z]{2}[0-9]{1,4}.
+  Immutable VO.
+end note
+
+note bottom of JpaFlightRouteRepository
+  Filtering done by JPQL (DB),
+  not in Java code (NFR03/CO4).
+end note
+
+@enduml

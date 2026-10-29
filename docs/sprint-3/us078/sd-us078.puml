@@ -1,0 +1,162 @@
+@startuml sd-us078
+skinparam actorStyle awesome
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+autonumber
+
+title US078 – ATCC Remote Access (realization)
+
+actor "ATCC" as A
+participant ":AtccRemoteClient" as CLIENT <<presentation>>
+participant ":AtccTcpServer" as SERVER <<infrastructure>>
+participant ":AtccConnectionHandler" as HANDLER <<infrastructure>>
+participant ":AuthenticationCredentialHandler" as AUTH <<infrastructure>>
+participant ":DefaultAtccSessionContext" as SESSION <<infrastructure>>
+participant ":<<existing use-case>>\\nController" as CTRL <<application>>
+
+activate SERVER
+note right of SERVER : ServerSocket listening on AtccProtocol.PORT (6666)
+
+activate A
+
+A -> CLIENT : main(host, port)
+activate CLIENT
+note right of CLIENT
+  US078.1 – dedicated TCP client
+  US078.2 – no direct DB access
+end note
+
+CLIENT -> SERVER : new Socket(host, port)
+
+SERVER -> HANDLER : new AtccConnectionHandler(clientSocket)
+activate HANDLER
+SERVER -> SERVER : new Thread(handler).start()
+deactivate SERVER
+
+note over SERVER, CLIENT : TCP handshake complete; per-connection handler thread
+
+CLIENT -> HANDLER : writeByte(LOGIN)\nwriteString(username)\nwriteString(password)
+
+HANDLER -> AUTH : authenticated(username, password, AisafeRoles.AIR_TRANSPORT_COMPANY_COLLABORATOR)
+activate AUTH
+AUTH --> HANDLER : true / false
+deactivate AUTH
+note right of HANDLER : US078.4 – only ATCC role admitted
+
+alt credentials valid AND role == ATCC
+    HANDLER --> CLIENT : writeByte(RESPONSE_OK)
+    CLIENT --> A : "Login successful"
+
+    loop while command != LOGOUT
+        A -> CLIENT : choose ATCC operation
+        CLIENT -> HANDLER : writeByte(commandCode)\nwriteString/writeArgs(args)
+        note right of CLIENT : US078.3 – all ATCC USs remotely available
+
+        HANDLER -> HANDLER : dispatch(commandCode, in, out)
+
+        alt ADD_AIRCRAFT (US070)
+            HANDLER -> SESSION : addAircraft(registration, modelId, seats, country)
+            activate SESSION
+            SESSION -> CTRL : delegates to AddAircraftController
+            activate CTRL
+            CTRL --> SESSION : Aircraft
+            deactivate CTRL
+            SESSION --> HANDLER : Aircraft
+            deactivate SESSION
+            HANDLER --> CLIENT : RESPONSE_DATA + registration
+        else DECOMMISSION_AIRCRAFT (US071)
+            HANDLER -> SESSION : decommissionAircraft(registration)
+            activate SESSION
+            SESSION -> CTRL : delegates to DecommissionAircraftController
+            activate CTRL
+            CTRL --> SESSION : Aircraft
+            deactivate CTRL
+            SESSION --> HANDLER : Aircraft
+            deactivate SESSION
+            HANDLER --> CLIENT : RESPONSE_OK
+        else LIST_FLEET (US072)
+            HANDLER -> SESSION : listFleet()
+            activate SESSION
+            SESSION -> CTRL : delegates to ListCompanyFleetController
+            activate CTRL
+            CTRL --> SESSION : List<AircraftDTO>
+            deactivate CTRL
+            SESSION --> HANDLER : List<AircraftDTO>
+            deactivate SESSION
+            HANDLER --> CLIENT : RESPONSE_DATA + count + (reg, model, status) per entry
+        else CREATE_FLIGHT_ROUTE (US073)
+            HANDLER -> SESSION : createFlightRoute(routeName, originCode, destCode)
+            activate SESSION
+            SESSION -> CTRL : delegates to CreateFlightRouteController
+            activate CTRL
+            CTRL --> SESSION : FlightRoute
+            deactivate CTRL
+            SESSION --> HANDLER : FlightRoute
+            deactivate SESSION
+            HANDLER --> CLIENT : RESPONSE_DATA + routeName
+        else DEACTIVATE_FLIGHT_ROUTE (US074)
+            HANDLER -> SESSION : deactivateFlightRoute(routeName, effectiveDate)
+            activate SESSION
+            SESSION -> CTRL : delegates to DeactivateFlightRouteController
+            activate CTRL
+            CTRL --> SESSION : FlightRoute
+            deactivate CTRL
+            SESSION --> HANDLER : FlightRoute
+            deactivate SESSION
+            HANDLER --> CLIENT : RESPONSE_OK
+        else ADD_PILOT (US075)
+            HANDLER -> SESSION : addPilot(pilotEmail, modelIds)
+            activate SESSION
+            SESSION -> CTRL : delegates to AddPilotController
+            activate CTRL
+            CTRL --> SESSION : Pilot
+            deactivate CTRL
+            SESSION --> HANDLER : Pilot
+            deactivate SESSION
+            HANDLER --> CLIENT : RESPONSE_DATA + pilotEmail
+        else LIST_PILOTS (US076)
+            HANDLER -> SESSION : listPilots()
+            activate SESSION
+            SESSION -> CTRL : delegates to ListPilotController
+            activate CTRL
+            CTRL --> SESSION : Iterable<Pilot>
+            deactivate CTRL
+            SESSION --> HANDLER : Iterable<Pilot>
+            deactivate SESSION
+            HANDLER --> CLIENT : RESPONSE_DATA + count + (email, company, status) per pilot
+        else DEACTIVATE_PILOT (US077)
+            HANDLER -> SESSION : deactivatePilot(pilotEmail)
+            activate SESSION
+            SESSION -> CTRL : delegates to DeactivatePilotController
+            activate CTRL
+            CTRL --> SESSION : void
+            deactivate CTRL
+            SESSION --> HANDLER : void
+            deactivate SESSION
+            HANDLER --> CLIENT : RESPONSE_OK
+        else unknown command
+            HANDLER --> CLIENT : RESPONSE_ERROR + "Unknown command"
+        end
+
+        CLIENT --> A : display result
+    end
+
+    A -> CLIENT : logout
+    CLIENT -> HANDLER : writeByte(LOGOUT)
+    HANDLER --> CLIENT : writeByte(RESPONSE_OK)
+    HANDLER -> HANDLER : socket.close()
+    deactivate HANDLER
+
+    CLIENT --> A : "Session ended"
+    deactivate CLIENT
+else invalid credentials or wrong role
+    HANDLER --> CLIENT : writeByte(RESPONSE_ERROR) + "Unauthorized"
+    HANDLER -> HANDLER : socket.close()
+    deactivate HANDLER
+    CLIENT --> A : "Login failed"
+    deactivate CLIENT
+end
+
+deactivate A
+
+@enduml

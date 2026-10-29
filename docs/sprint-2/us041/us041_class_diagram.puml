@@ -1,0 +1,125 @@
+@startuml us041_class_diagram
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>> #95A5A6
+    FontColor<<external>> #1A1A1A
+}
+
+' ============================================
+' PRESENTATION (aisafe.app.weather.console)
+' ============================================
+package "Presentation" {
+    class MainMenu <<external>> {
+        + buildMainMenu()
+    }
+    class RegisterWeatherDataAction {
+        + execute() : boolean
+    }
+    class RegisterWeatherDataUI {
+        + doShow() : boolean
+    }
+}
+
+' ============================================
+' APPLICATION (aisafe.core)
+' ============================================
+package "Application" {
+    class RegisterWeatherDataController <<UseCaseController>> {
+        + listAirControlAreas() : Iterable<AirControlArea>
+        + registerWeatherData(areaCode, startTime, endTime,\ntemperature, pressure, visibility,\nwindSpeed, windDirection, dataSource) : WeatherData
+    }
+}
+
+' ============================================
+' DOMAIN (aisafe.core)
+' ============================================
+package "Domain" {
+    class WeatherData <<aggregate root>> {
+        + identity() : WeatherDataId
+    }
+    class WeatherDataId <<value object>>
+    class TimePeriod <<value object>> {
+        + startTime : LocalDateTime
+        + endTime : LocalDateTime
+    }
+    class WeatherWindSpeed <<value object>>
+    class WeatherWindDirection <<value object>>
+    class DataSource <<value object>>
+
+    interface WeatherDataRepository {
+        + save(WeatherData) : WeatherData
+        + findByAreaAndPeriod(AreaCode, TimePeriod) : Iterable<WeatherData>
+    }
+
+    ' External — area existence check
+    class AirControlArea <<external>>
+    class AreaCode <<external>>
+    interface AirControlAreaRepository <<external>> {
+        + findByCode(AreaCode) : Optional<AirControlArea>
+        + findAll() : Iterable<AirControlArea>
+    }
+}
+
+' ============================================
+' INFRASTRUCTURE (eapli.framework)
+' ============================================
+package "Infrastructure" {
+    class AuthorizationService <<external>> {
+        + loggedinUserWithPermission(role) : SystemUser
+    }
+}
+
+' ============================================
+' PERSISTENCE (aisafe.persistence.impl)
+' ============================================
+package "Persistence" {
+    class InMemoryWeatherDataRepository
+    class JpaWeatherDataRepository
+}
+
+' ============================================
+' BOOTSTRAP (aisafe.bootstrappers)
+' ============================================
+package "Bootstrap" {
+    class WeatherDataBootstrapper {
+        + execute() : boolean
+    }
+}
+
+' ============================================
+' Relationships
+' ============================================
+MainMenu --> RegisterWeatherDataAction : registers
+RegisterWeatherDataAction ..> RegisterWeatherDataUI : invokes
+RegisterWeatherDataUI ..> RegisterWeatherDataController : uses
+
+RegisterWeatherDataController ..> AuthorizationService : verifies role
+RegisterWeatherDataController ..> AirControlAreaRepository : checks area exists
+RegisterWeatherDataController ..> WeatherDataRepository : uses
+RegisterWeatherDataController ..> WeatherData : creates
+
+WeatherData *-- WeatherDataId
+WeatherData *-- TimePeriod
+WeatherData *-- WeatherWindSpeed
+WeatherData *-- WeatherWindDirection
+WeatherData *-- DataSource
+
+WeatherData --> AirControlArea : references by AreaCode
+
+InMemoryWeatherDataRepository ..|> WeatherDataRepository
+JpaWeatherDataRepository ..|> WeatherDataRepository
+
+WeatherDataBootstrapper ..> RegisterWeatherDataController : uses
+
+@enduml

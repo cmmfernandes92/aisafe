@@ -1,0 +1,69 @@
+@startuml
+title US090 - External logging of remote accesses (UDP)
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+
+package "aisafe.app.common.console (emitter)" {
+    enum RemoteAccessEvent {
+        LOGIN_OK
+        LOGIN_FAIL
+        LOGOUT
+        DISCONNECT
+    }
+
+    class RemoteAccessLogger {
+        - DatagramSocket socket
+        - InetAddress host
+        - int port
+        + {static} fromSystemProperties() : RemoteAccessLogger
+        + {static} disabled() : RemoteAccessLogger
+        + log(event, username, client, service) : void
+    }
+    RemoteAccessLogger ..> RemoteAccessEvent
+}
+
+package "aisafe.app.weather.console (US44 server)" {
+    class WeatherClientHandler {
+        - SERVICE = "US44"
+    }
+}
+
+package "aisafe.app.atcc.console (US78 server)" {
+    class AtccConnectionHandler {
+        - SERVICE = "US78"
+    }
+}
+
+package "aisafe.app.pilot.console (US86 server)" {
+    class PilotConnectionHandler {
+        - SERVICE = "US86"
+    }
+}
+
+package "aisafe.app.logserver (receiver)" {
+    class RemoteAccessLogReceiver {
+        - int port
+        + run() : void
+    }
+
+    class LogStore {
+        + record(rawLine) : void
+        + eventsHtml() : String
+        + activeUsersHtml() : String
+    }
+
+    class LogEvent <<record>> {
+        + {static} parse(line) : LogEvent
+    }
+    LogStore *-- "0..*" LogEvent
+    RemoteAccessLogReceiver --> LogStore : record()
+}
+
+WeatherClientHandler --> RemoteAccessLogger : log()
+AtccConnectionHandler --> RemoteAccessLogger : log()
+PilotConnectionHandler --> RemoteAccessLogger : log()
+
+RemoteAccessLogger ..> RemoteAccessLogReceiver : UDP datagram\n(eventType|ts|user|ip|port|service)
+
+@enduml

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AISafe - Aircraft</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260614-atcc-aircraft">
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar('aircraft', ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">US070 / US071 / US072</p>
+          <h1>Aircraft</h1>
+          <p class="page-copy">Company fleet registry with model, cabin, registration, and operational status.</p>
+        </div>
+      </header>
+
+      <section class="areas-grid">
+        <article th:replace="~{fragments/table-card :: card(
+            'Company Aircraft',
+            '/modules/air-transport-company/aircraft/table',
+            '#aircraft-tbody',
+            'Refresh aircraft',
+            ~{::#aircraft-head},
+            ~{fragments/atcc-aircraft :: rows(${snapshot.aircraftRows()})})}">
+          <thead id="aircraft-head">
+          <tr>
+            <th>Registration</th>
+            <th>Model</th>
+            <th>Maker</th>
+            <th>Economy</th>
+            <th>Business</th>
+            <th>First</th>
+            <th>Total</th>
+            <th>Country</th>
+            <th>Status</th>
+          </tr>
+          </thead>
+        </article>
+
+        <aside class="stack">
+          <div id="aircraft-action-result"></div>
+
+          <section class="card form-card">
+            <div class="card-head">
+              <h2>Add Aircraft</h2>
+              <span>US070</span>
+            </div>
+            <form hx-post="/modules/air-transport-company/aircraft"
+                  hx-target="#aircraft-action-result"
+                  hx-swap="innerHTML"
+                  class="stack">
+              <label>
+                <span>Registration</span>
+                <input name="registration" required maxlength="10" placeholder="CS-TNA"
+                       oninput="this.value=this.value.toUpperCase()">
+              </label>
+
+              <label>
+                <span>Aircraft Model</span>
+                <select name="modelId" required>
+                  <option value="">Select aircraft model</option>
+                  <option th:each="model : ${snapshot.models()}"
+                          th:value="${model.id()}"
+                          th:text="|[${model.id()}] ${model.modelName()} - ${model.makerName()}|">[1] A320 - Airbus</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Registration Country</span>
+                <input name="country" required maxlength="64" placeholder="Portugal">
+              </label>
+
+              <div class="form-grid">
+                <label>
+                  <span>Economy</span>
+                  <input name="economySeats" type="number" min="0" step="1" required value="0">
+                </label>
+                <label>
+                  <span>Business</span>
+                  <input name="businessSeats" type="number" min="0" step="1" required value="0">
+                </label>
+                <label>
+                  <span>First</span>
+                  <input name="firstClassSeats" type="number" min="0" step="1" required value="0">
+                </label>
+              </div>
+
+              <button type="submit">Add Aircraft</button>
+            </form>
+          </section>
+
+          <section class="card form-card">
+            <div class="card-head">
+              <h2>Decommission Aircraft</h2>
+              <span>US071</span>
+            </div>
+            <form hx-post="/modules/air-transport-company/aircraft/decommission"
+                  hx-target="#aircraft-action-result"
+                  hx-swap="innerHTML"
+                  class="stack">
+              <label>
+                <span>Registration</span>
+                <input name="registration" required maxlength="10" placeholder="CS-TNA"
+                       oninput="this.value=this.value.toUpperCase()">
+              </label>
+
+              <button type="submit">Decommission</button>
+            </form>
+          </section>
+        </aside>
+      </section>
+    </main>
+  </div>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/sortable-table.js"></script>
+</body>
+</html>

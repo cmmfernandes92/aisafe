@@ -1,0 +1,158 @@
+@startuml us061_class_diagram
+title US061 - Register a Customer's Collaborator Class Diagram
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>> #95A5A6
+    FontColor<<external>> #1A1A1A
+}
+
+' ============================================
+' PRESENTATION (aisafe.app.backoffice.console)
+' ============================================
+package "Presentation" {
+    class RegisterCollaboratorAction {
+        + execute() : boolean
+    }
+    class RegisterCollaboratorUI {
+        + doShow() : boolean
+        + headline() : String
+    }
+}
+
+' ============================================
+' APPLICATION (aisafe.core)
+' ============================================
+package "Application" {
+    class RegisterCollaboratorController <<UseCaseController>> {
+        + registerCompanyCollaborator(email, position, iataCode) : CompanyCollaborator
+        + registerAreaCollaborator(email, position, areaCode) : AreaCollaborator
+        + userExists(Email) : boolean
+        + isAlreadyCollaborator(Email) : boolean
+        + companyExists(CompanyIATACode) : boolean
+        + areaExists(AreaCode) : boolean
+    }
+}
+
+' ============================================
+' DOMAIN (aisafe.core)
+' ============================================
+package "Domain" {
+
+    ' --- Collaborator aggregate (new in US061) ---
+    abstract class Collaborator <<aggregate root>> {
+        + identity() : Email
+        + position() : Position
+        + status() : CollaboratorStatus
+    }
+    class CompanyCollaborator {
+        - companyCode : CompanyIATACode
+        + companyCode() : CompanyIATACode
+    }
+    class AreaCollaborator {
+        - areaCode : AreaCode
+        + areaCode() : AreaCode
+    }
+    class Position <<value object>> {
+        - value : String
+        + valueOf(String) : Position
+        + value() : String
+    }
+    enum CollaboratorStatus <<enum>> {
+        ACTIVE
+        DISABLED
+    }
+    interface CollaboratorRepository {
+        + ofIdentity(Email) : Optional<Collaborator>
+        + save(Collaborator) : Collaborator
+    }
+
+    ' --- External aggregates and types ---
+    class User <<aggregate root>><<external>> {
+        + identity() : Email
+        + systemUser() : SystemUser
+    }
+    class SystemUser <<external>> {
+        + hasRole(Role) : boolean
+    }
+    class Email <<value object>><<external>>
+    class CompanyIATACode <<value object>><<external>>
+    class AreaCode <<value object>><<external>>
+    class AisafeRoles <<external>> {
+        {static} + AIR_TRANSPORT_COMPANY_COLLABORATOR : Role
+        {static} + FLIGHT_CONTROL_OPERATOR : Role
+    }
+    class AirTransportCompany <<aggregate root>><<external>>
+    class AirControlArea <<aggregate root>><<external>>
+    interface UserRepository <<external>>
+    interface AirTransportCompanyRepository <<external>>
+    interface AirControlAreaRepository <<external>>
+}
+
+' ============================================
+' PERSISTENCE (aisafe.persistence.impl)
+' ============================================
+package "Persistence" {
+    class InMemoryCollaboratorRepository
+    class JpaCollaboratorRepository
+}
+
+' ============================================
+' BOOTSTRAP (aisafe.bootstrappers)
+' ============================================
+package "Bootstrap" {
+    class CollaboratorBootstrapper {
+        + execute() : boolean
+    }
+}
+
+' ============================================
+' Relationships
+' ============================================
+
+' Presentation wiring
+RegisterCollaboratorAction ..> RegisterCollaboratorUI : invokes
+RegisterCollaboratorUI ..> RegisterCollaboratorController : uses
+
+' Controller dependencies (constructor injection)
+RegisterCollaboratorController ..> CollaboratorRepository : uses
+RegisterCollaboratorController ..> UserRepository : uses
+RegisterCollaboratorController ..> AirTransportCompanyRepository : uses
+RegisterCollaboratorController ..> AirControlAreaRepository : uses
+RegisterCollaboratorController ..> CompanyCollaborator : creates
+RegisterCollaboratorController ..> AreaCollaborator : creates
+RegisterCollaboratorController ..> AisafeRoles : reads role constants
+
+' Inheritance
+CompanyCollaborator --|> Collaborator
+AreaCollaborator --|> Collaborator
+
+' Aggregate composition
+Collaborator *-- Email : @EmbeddedId
+Collaborator *-- Position
+Collaborator *-- CollaboratorStatus
+
+' Cross-aggregate references
+Collaborator ..> User : identified by email
+CompanyCollaborator --> AirTransportCompany : references by CompanyIATACode
+AreaCollaborator --> AirControlArea : references by AreaCode
+User *-- SystemUser : authenticates as
+
+' Persistence
+InMemoryCollaboratorRepository ..|> CollaboratorRepository
+JpaCollaboratorRepository ..|> CollaboratorRepository
+
+' Bootstrap wiring
+CollaboratorBootstrapper ..> RegisterCollaboratorController : uses
+
+@enduml

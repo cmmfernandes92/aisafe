@@ -1,0 +1,52 @@
+@startuml
+title US091 - Remote accesses logging visualization (HTTP + AJAX)
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+
+package "aisafe.app.logserver" {
+
+    class LogServerApp {
+        + {static} main(args) : void
+    }
+
+    class LogHttpServer {
+        - int port
+        + run() : void
+    }
+
+    class LogHttpRequest {
+        + run() : void
+        - route(path, out) : void
+        - serveStatic(name, out) : void
+    }
+
+    class Http {
+        + {static} readLineCRLF(in) : String
+        + {static} writeResponse(out, status, reason, contentType, body) : void
+    }
+
+    class LogStore {
+        + record(rawLine) : void
+        + eventsHtml() : String
+        + activeUsersHtml() : String
+    }
+
+    LogServerApp --> LogHttpServer
+    LogServerApp --> LogStore
+    LogHttpServer --> "1 per request" LogHttpRequest
+    LogHttpRequest ..> Http
+    LogHttpRequest --> LogStore : eventsHtml()\nactiveUsersHtml()
+}
+
+package "www (static, served over HTTP)" {
+    class "index.html" as Index <<file>>
+    class "rcomp-ajax.js" as Ajax <<file>> {
+        2 self-rescheduling pollers
+    }
+}
+
+Index ..> Ajax : loads
+Ajax ..> LogHttpRequest : GET /events\nGET /active
+
+@enduml

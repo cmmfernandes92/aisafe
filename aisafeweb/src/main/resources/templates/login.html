@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AISafe - Sign in</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260531-table-polish">
+</head>
+<body class="app-shell login-shell">
+  <div class="backdrop"></div>
+  <main class="login-layout">
+    <section class="login-context">
+      <img class="brand-mark" src="/img/logo.png" alt="AISafe logo">
+      <div class="login-brand-wordmark"><i>AI</i>Safe</div>
+      <h1>Operations control for the airspace.</h1>
+      <p class="muted">Sign in to manage the reference data that powers AISafe: areas, airports, aircraft, operators, and the people who run them.</p>
+      <div class="entity-row">
+        <span>Areas</span>
+        <span>Airports</span>
+        <span>Aircraft</span>
+        <span>Users</span>
+      </div>
+    </section>
+
+    <section class="login-card">
+      <h2>Sign in</h2>
+      <p class="muted small">Use your operator credentials. Sessions expire automatically.</p>
+      <div id="auth-result"></div>
+      <form hx-post="/login" hx-target="#auth-result" hx-swap="innerHTML" class="stack">
+        <label>
+          <span>Username</span>
+          <input name="username" autocomplete="username" required placeholder="poweruser">
+        </label>
+        <label>
+          <span>Password</span>
+          <input name="password" type="password" autocomplete="current-password" required>
+        </label>
+        <button type="submit">Authenticate</button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

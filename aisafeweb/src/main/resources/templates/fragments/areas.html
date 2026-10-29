@@ -1,0 +1,13 @@
+<tbody th:fragment="rows(areas)" id="areas-tbody">
+  <tr th:each="area : ${areas}">
+    <td class="mono" th:text="${area.code()}">LPPC</td>
+    <td th:text="${area.name()}">Lisbon ACC</td>
+    <td class="mono" th:text="${#numbers.formatDecimal(area.boundary().southwest().latitude(), 1, 4)}">38.5</td>
+    <td class="mono" th:text="${#numbers.formatDecimal(area.boundary().southwest().longitude(), 1, 4)}">-9.5</td>
+    <td class="mono" th:text="${#numbers.formatDecimal(area.boundary().northeast().latitude(), 1, 4)}">39.1</td>
+    <td class="mono" th:text="${#numbers.formatDecimal(area.boundary().northeast().longitude(), 1, 4)}">-8.8</td>
+  </tr>
+  <tr th:if="${#lists.isEmpty(areas)}">
+    <td colspan="6" class="empty">No air control areas registered.</td>
+  </tr>
+</tbody>

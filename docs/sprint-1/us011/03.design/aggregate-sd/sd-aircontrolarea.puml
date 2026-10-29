@@ -1,0 +1,55 @@
+@startuml
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+autonumber
+title Register Air Control Area
+
+actor "Backoffice Operator" as BO
+participant ":AirControlAreaUI" as UI <<presentation>>
+participant ":RegisterAirControlAreaController" as C <<application>>
+participant ":AirControlAreaRepository" as Repo <<persistence>>
+participant ":AreaCode" as AC <<domain>>
+participant ":GeographicBoundary" as GB <<domain>>
+participant ":AirControlArea" as ACA <<domain>>
+
+activate BO
+BO -> UI : asks to register\nan air control area
+activate UI
+UI --> BO : requests air control area data
+deactivate UI
+
+BO -> UI : enters areaCode,\ngeographicBoundary
+activate UI
+UI -> C : registerAirControlArea(areaCode, geographicBoundary)
+activate C
+
+C -> AC ** : create(areaCode)
+note right of AC
+  Validates (Information Expert):
+  - areaCode is valid
+end note
+
+C -> Repo : containsOfIdentity(areaCodeVO)
+activate Repo
+Repo --> C : false
+deactivate Repo
+
+C -> GB ** : create(geographicBoundary)
+note right of GB
+  Validates (Information Expert):
+  - geographicBoundary is valid
+end note
+
+C -> ACA ** : create(areaCodeVO, geographicBoundaryVO)
+
+C -> Repo : save(airControlArea)
+activate Repo
+Repo --> C : airControlArea
+deactivate Repo
+
+C --> UI : airControlArea
+deactivate C
+UI --> BO : shows successful registration
+deactivate UI
+deactivate BO
+@enduml

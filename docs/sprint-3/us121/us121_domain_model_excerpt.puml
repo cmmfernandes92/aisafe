@@ -1,0 +1,122 @@
+@startuml us121_domain_model_excerpt
+title Team Domain Model â€” Excerpt Relevant to US121 (Create Flight Plan from File)
+caption Subset extracted from the project's main domain model.\nShows the aggregates created, referenced, or traversed by the import-from-file use case.
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor      #5B9BD5
+skinparam packageStyle           rectangle
+skinparam packageBorderColor     #888888
+skinparam defaultFontSize        11
+hide empty members
+left to right direction
+
+' ============================================================
+' Flight Aggregate - FlightPlan is an entity inside it (created by US080)
+' ============================================================
+package "Flight Aggregate" {
+    class Flight <<aggregate root>>
+    class FlightDesignator <<value object>>
+
+    class FlightPlan <<entity>> {
+        flightPlanID
+    }
+    enum FlightPlanStatus <<enum>> {
+        DRAFT
+        VALIDATED
+        TESTED
+    }
+
+    class FlightLeg <<entity>>
+    class DepartureInfo <<value object>>
+    class ArrivalInfo <<value object>>
+    class FuelLoad <<value object>>
+
+    class FlightSegment <<entity>>
+    class Waypoint <<value object>>
+    class Coordinates <<value object>>
+    class AltitudeSlot <<value object>>
+    class WindDirection <<value object>>
+    class WindSpeed <<value object>>
+
+    Flight *-- FlightDesignator
+    Flight *-- "1..*" FlightPlan
+
+    FlightPlan *-- FlightPlanStatus
+    FlightPlan *-- "1..*" FlightLeg
+
+    FlightLeg *-- DepartureInfo
+    FlightLeg *-- ArrivalInfo
+    FlightLeg *-- FuelLoad
+    FlightLeg *-- "1..*" FlightSegment
+
+    FlightSegment *-- "2" Waypoint : start, end
+    FlightSegment *-- "1..*" AltitudeSlot
+    FlightSegment *-- WindDirection
+    FlightSegment *-- WindSpeed
+
+    Waypoint *-- Coordinates
+}
+
+' ============================================================
+' Pilot Aggregate â€” the actor who performs the import
+' ============================================================
+package "Pilot Aggregate" {
+    class Pilot <<aggregate root>>
+}
+
+' ============================================================
+' Airport Aggregate â€” referenced by departure/arrival info
+' ============================================================
+package "Airport Aggregate" {
+    class Airport <<aggregate root>>
+    class AirportIATACode <<value object>>
+    class AirportICAOCode <<value object>>
+
+    Airport *-- AirportIATACode
+    Airport *-- AirportICAOCode
+}
+
+' ============================================================
+' FlightRoute Aggregate â€” origin and destination of the flight
+' ============================================================
+package "FlightRoute Aggregate" {
+    class FlightRoute <<aggregate root>>
+    class RouteName <<value object>>
+
+    FlightRoute *-- RouteName
+}
+
+' ============================================================
+' Cross-aggregate relationships relevant to US121
+' ============================================================
+Flight     --> Pilot        : assigned to
+Flight     --> FlightRoute  : for route
+
+DepartureInfo --> Airport   : from
+ArrivalInfo   --> Airport   : to
+FlightRoute   --> "2" Airport : origin, destination
+
+' ============================================================
+' US121 import note
+' ============================================================
+note as ImportNote
+  **US121 import flow**
+
+  1. Pilot selects a .flight file.
+  2. System validates it via US120 DSL compiler
+     (lexical â†’ syntactic â†’ semantic).
+  3. If invalid: error messages with phase, line, column.
+     Import is aborted (AC#3, AC#4).
+  4. If valid: the existing DRAFT FlightPlan of the Flight
+     (created by US080, identified by route + departure date)
+     has its body superseded with the DSL content and is
+     promoted to VALIDATED.
+
+  Status transitions:
+    DRAFT (US080) -> VALIDATED (US121) -> TESTED (US085)
+end note
+
+ImportNote .. FlightPlan
+
+@enduml

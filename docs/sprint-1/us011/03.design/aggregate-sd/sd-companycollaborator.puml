@@ -1,0 +1,59 @@
+@startuml
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+autonumber
+
+title Add Company Collaborator
+
+actor "Backoffice Operator" as BO
+participant ":CompanyCollaboratorUI" as UI <<presentation>>
+participant ":CreateCompanyCollaboratorController" as C <<application>>
+participant ":AirTransportCompanyRepository" as ATCR <<persistence>>
+participant ":UserRepository" as UR <<persistence>>
+participant ":CompanyCollaboratorRepository" as CCR <<persistence>>
+participant ":CompanyCollaborator" as CC <<domain>>
+
+activate BO
+
+BO -> UI : asks to add\na company collaborator
+activate UI
+UI --> BO : requests collaborator data
+deactivate UI
+
+BO -> UI : enters companyId, userId,\nposition, collaboratorStatus
+activate UI
+UI -> C : createCompanyCollaborator(companyId,\nuserId, position, collaboratorStatus)
+activate C
+
+C -> ATCR : ofIdentity(companyId)
+activate ATCR
+ATCR --> C : airTransportCompany
+deactivate ATCR
+
+C -> UR : ofIdentity(userId)
+activate UR
+UR --> C : user
+deactivate UR
+
+C -> CC ** : create(airTransportCompany,\nuser, position, collaboratorStatus)
+note right of CC
+  Validates (Information Expert):
+  - collaborator belongs to exactly one company
+  - collaborator references exactly one user
+  - position is valid
+  - collaborator status is valid
+end note
+
+C -> CCR : save(companyCollaborator)
+activate CCR
+CCR --> C : companyCollaborator
+deactivate CCR
+
+C --> UI : companyCollaborator
+deactivate C
+
+UI --> BO : shows successful creation
+deactivate UI
+deactivate BO
+
+@enduml

@@ -1,0 +1,89 @@
+@startuml us043_full_sequence_diagram
+
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+autonumber
+
+actor "Weather Person / Pilot / Flight Control Operator" as USER
+participant ":ConsultWeatherDataUI" as UI
+participant ":ConsultWeatherDataController" as CTRL
+participant "authz\n:AuthorizationService" as AUTHZ
+participant "airControlAreaRepository\n:AirControlAreaRepository" as AREA_REPO
+participant "weatherDataRepository\n:WeatherDataRepository" as WEATHER_REPO
+participant "areaCode\n:AreaCode" as AREA_CODE
+participant "airControlArea\n:AirControlArea" as AREA
+participant "weatherData\n:WeatherData" as WEATHER
+
+activate USER
+
+USER -> UI : asks to consult weather data
+activate UI
+    UI --> CTRL** : new ConsultWeatherDataController(\n  weatherDataRepository, airControlAreaRepository)
+    activate CTRL
+    deactivate CTRL
+
+    UI -> CTRL : listAirControlAreas()
+    activate CTRL
+        CTRL -> AUTHZ : ensureAuthenticatedUserHasAnyOf(WEATHER_PERSON,\nPILOT, FLIGHT_CONTROL_OPERATOR)
+        activate AUTHZ
+            AUTHZ --> CTRL : authorized
+        deactivate AUTHZ
+
+        CTRL -> AREA_REPO : findAll()
+        activate AREA_REPO
+            AREA_REPO --> CTRL : airControlAreaList
+        deactivate AREA_REPO
+
+        CTRL --> UI : airControlAreaList
+    deactivate CTRL
+
+    UI --> USER : shows air control area list\nand asks to select one
+deactivate UI
+
+USER -> UI : selects air control area
+activate UI
+    UI --> USER : asks to type/select day
+deactivate UI
+
+USER -> UI : types/selects day
+activate UI
+    UI -> CTRL : consultWeatherData(areaCodeValue, day)
+    activate CTRL
+
+        CTRL -> AUTHZ : ensureAuthenticatedUserHasAnyOf(WEATHER_PERSON,\nPILOT, FLIGHT_CONTROL_OPERATOR)
+        activate AUTHZ
+            AUTHZ --> CTRL : authorized
+        deactivate AUTHZ
+
+        CTRL --> AREA_CODE** : valueOf(areaCodeValue)
+
+        CTRL -> AREA_REPO : findByCode(areaCode)
+        activate AREA_REPO
+            AREA_REPO --> CTRL : optionalAirControlArea
+        deactivate AREA_REPO
+
+        alt air control area does not exist
+            CTRL --> UI : error("Air control area not found")
+            UI --> USER : displays error message
+        else air control area exists
+            CTRL -> WEATHER_REPO : findByAreaCodeAndDay(areaCode, day)
+            activate WEATHER_REPO
+                WEATHER_REPO --> CTRL : weatherDataList
+            deactivate WEATHER_REPO
+
+            alt no matching weather data
+                CTRL --> UI : empty weatherDataList
+                UI --> USER : displays "No weather data available"
+            else matching weather data found
+                CTRL --> UI : weatherDataList
+                UI --> USER : displays weather data records\n(including zone and altitude information)
+            end
+        end
+
+    deactivate CTRL
+deactivate UI
+
+deactivate USER
+
+@enduml

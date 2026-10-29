@@ -1,0 +1,58 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+skinparam noteBackgroundColor #FFF8DC
+skinparam noteBorderColor #B8860B
+hide empty members
+
+package "FlightRoute Aggregate" {
+    class FlightRoute <<aggregate root>> {
+        + active : boolean
+        + deactivatedFrom : Date
+    }
+    class RouteName <<value object>> {
+        + value : String
+    }
+
+    FlightRoute *-- RouteName : identity
+
+    note right of FlightRoute
+        US074 behaviour:
+        - deactivate(from) sets active = false
+          and records deactivatedFrom = from
+        - already-inactive route cannot be
+          deactivated again (idempotency guard)
+        - "no planned flights on/after the date"
+          is a cross-aggregate rule, enforced at
+          the application layer (not in the root)
+    end note
+
+    note left of RouteName
+        Identity carried over from US073.
+        Format: [A-Z]{2}[0-9]{1,4}
+    end note
+}
+
+' External aggregates (only referenced, not modified by this US)
+class AirTransportCompany #lightgrey
+class FlightPlan #lightgrey
+
+FlightRoute --> AirTransportCompany : owned by\n(by CompanyIATACode)
+
+note bottom of FlightPlan
+    Read-only here. Queried via a
+    Specification "planned on route R
+    on/after date D". Source US080.
+    If US080 is not yet merged, the
+    query yields none and the guard passes.
+end note
+
+FlightPlan ..> FlightRoute : references\n(by RouteName)
+
+@enduml

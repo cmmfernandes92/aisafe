@@ -1,0 +1,71 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+skinparam noteBackgroundColor #FFF8DC
+skinparam noteBorderColor #B8860B
+hide empty members
+
+package "Collaborator Aggregate (read context)" {
+    abstract class Collaborator <<aggregate root>>
+    class CompanyCollaborator
+    class AreaCollaborator
+    class Position <<value object>>
+    enum CollaboratorStatus <<enum>> {
+        ACTIVE
+        DISABLED
+    }
+
+    CompanyCollaborator --|> Collaborator
+    AreaCollaborator --|> Collaborator
+
+    Collaborator *-- Position
+    Collaborator *-- CollaboratorStatus
+
+    note right of Collaborator
+        - Each collaborator references exactly one User
+        - One User can be the identity of at most
+          one collaborator at any given time
+        - Position and customer reference are
+          immutable post-creation
+        - Disabled collaborators must not appear
+          in collaborator listings
+    end note
+
+    note bottom of CompanyCollaborator
+        - Belongs to exactly one AirTransportCompany
+        - Identity User must have SystemRole =
+          AIR_TRANSPORT_COMPANY_COLLABORATOR
+    end note
+
+    note bottom of AreaCollaborator
+        - Belongs to exactly one AirControlArea
+        - Identity User must have SystemRole =
+          FLIGHT_CONTROL_OPERATOR
+    end note
+
+    note left of Position
+        Not null, not blank
+    end note
+
+    note right of CollaboratorStatus
+        US062 query rule: only entries with
+        status = ACTIVE are returned.
+        Defaults to ACTIVE on creation.
+    end note
+}
+
+class User #lightgrey
+class AirTransportCompany #lightgrey
+class AirControlArea #lightgrey
+
+Collaborator --> User : identity
+CompanyCollaborator --> AirTransportCompany : works for
+AreaCollaborator --> AirControlArea : works for
+
+@enduml

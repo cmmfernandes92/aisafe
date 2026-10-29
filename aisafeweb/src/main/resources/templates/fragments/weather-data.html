@@ -1,0 +1,14 @@
+<tbody th:fragment="rows(weatherData)" id="weather-data-tbody">
+  <tr th:each="row : ${weatherData}">
+    <td class="mono" th:text="${row.areaCode()}">LPPC</td>
+    <td class="mono" th:text="${row.startTime()}">2026-06-03 10:00</td>
+    <td class="mono" th:text="${row.endTime()}">2026-06-03 11:00</td>
+    <td class="mono" th:text="|${row.zoneSwLat()},${row.zoneSwLon()} -> ${row.zoneNeLat()},${row.zoneNeLon()}|">38,-9 -> 39,-8</td>
+    <td class="mono" th:text="|${row.altLowerFeet()}-${row.altUpperFeet()} ft|">0-12000 ft</td>
+    <td class="mono" th:text="|${row.windDirection()} deg / ${row.windSpeed()} kt|">270 deg / 18 kt</td>
+    <td th:text="${row.dataSource()}">IPMA</td>
+  </tr>
+  <tr th:if="${#lists.isEmpty(weatherData)}">
+    <td colspan="7" class="empty">No weather data registered.</td>
+  </tr>
+</tbody>

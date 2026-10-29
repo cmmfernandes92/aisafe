@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AISafe - Add Weather Data</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260612-pilot-weather">
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar('add-weather-data', ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Pilot Operations</p>
+          <h1>Add Weather Data</h1>
+          <p class="page-copy">
+            Attach a registered weather forecast to the segments of one of your flight
+            plans. Weather may vary across segments; a TESTED plan is demoted back to
+            VALIDATED when its weather changes, so re-test afterwards.
+          </p>
+        </div>
+      </header>
+
+      <section class="areas-grid">
+        <article th:replace="~{fragments/pilot-flights :: panel(${flights}, ${planStatuses})}"></article>
+
+        <aside class="card form-card">
+          <div class="card-head">
+            <h2>Attach Weather</h2>
+          </div>
+          <div id="form-result"></div>
+
+          <label>
+            <span>Flight (VALIDATED or TESTED plan)</span>
+            <select name="flightKey" required
+                    hx-get="/modules/pilot-operations/add-weather-data/segments"
+                    hx-target="#weather-slot" hx-swap="innerHTML" hx-trigger="change">
+              <option value="">Select a flight</option>
+              <option th:each="f : ${weatherFlights}"
+                      th:value="${f.route() + '|' + f.departureDate()}"
+                      th:text="|${f.route()} · ${f.departure()} · ${f.aircraft()} · ${f.planStatus()}|">FR401 · 2026-06-12 13:00 · CS-MNB · VALIDATED</option>
+            </select>
+            <p class="field-note" th:if="${#lists.isEmpty(weatherFlights)}">
+              You have no flight with a validated plan yet. Import a flight plan first.
+            </p>
+          </label>
+
+          <div id="weather-slot">
+            <p class="field-note">Pick a flight to load its plan segments.</p>
+          </div>
+        </aside>
+      </section>
+    </main>
+  </div>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/sortable-table.js"></script>
+  <script src="/js/pilot-flights.js"></script>
+</body>
+</html>

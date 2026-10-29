@@ -1,0 +1,36 @@
+// Duplicate flight designator in the same file.
+flight TP123 {
+  type: regular
+  route { origin: LPPT destination: LFPG }
+  leg 1 {
+    departure { airport: LPPT datetime: 2026-05-20T08:30 }
+    arrival { airport: LFPG datetime: 2026-05-20T11:45 }
+    fuel: 8500 kg
+    segments {
+      segment {
+        start: (38.78, -9.13)
+        end: (48.99, 2.55)
+        slots { slot { altitude: 10000 m width: 500 m } }
+        wind { direction: 270 speed: 15.5 m/s }
+      }
+    }
+  }
+}
+
+flight TP123 {
+  type: charter
+  route { origin: LPPR destination: LEMD }
+  leg 1 {
+    departure { airport: LPPR datetime: 2026-06-10T07:00 }
+    arrival { airport: LEMD datetime: 2026-06-10T11:15 }
+    fuel: 5000 kg
+    segments {
+      segment {
+        start: (41.24, -8.68)
+        end: (40.49, -3.57)
+        slots { slot { altitude: 10000 m width: 500 m } }
+        wind { direction: 180 speed: 10.0 m/s }
+      }
+    }
+  }
+}

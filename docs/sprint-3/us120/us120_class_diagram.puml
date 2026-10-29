@@ -1,0 +1,156 @@
+@startuml us120_class_diagram
+title US120 - Flight DSL Semantic Validator Class Diagram
+
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam packageStyle rectangle
+hide empty members
+left to right direction
+
+' ============================================================
+' Public API — entry point
+' ============================================================
+package "lapr4.lprog.flightdsl.semantic" {
+    class FlightPlanSemanticValidator {
+        +validate(FlightPlanFile) : SemanticValidationResult
+    }
+    class SemanticValidationResult <<record>> {
+        +findings : List<SemanticError>
+        +isValid() : boolean
+        +has(SemanticErrorCode) : boolean
+        +count(SemanticErrorCode) : long
+        +render() : String
+    }
+    class SemanticError <<record>> {
+        +code : SemanticErrorCode
+        +message : String
+        +position : Position
+        +render() : String
+    }
+    enum SemanticErrorCode <<enum>> {
+        FLIGHT_ID_NOT_UNIQUE
+        FLIGHT_TYPE_INVALID
+        FLIGHT_MISSING_LEGS
+        LEG_MISSING_DEPARTURE
+        LEG_MISSING_ARRIVAL
+        LEG_MISSING_SEGMENTS
+        LEG_MISSING_FUEL
+        FUEL_NOT_POSITIVE
+        LEG_SEQUENCE_AIRPORT_MISMATCH
+        LEG_SEQUENCE_TIME_NOT_ORDERED
+        ROUTE_ORIGIN_MISMATCH
+        ROUTE_DESTINATION_MISMATCH
+        ROUTE_AIRPORT_REPEATED
+        SEGMENT_START_EQUALS_END
+        AIRPORT_CODE_BAD_FORMAT
+        NUMERIC_NOT_POSITIVE
+        DATETIME_INVALID_CALENDAR
+    }
+    class ErrorCollector {
+        +error(SemanticErrorCode, String, Position) : void
+        +errors() : List<SemanticError>
+        +isEmpty() : boolean
+    }
+
+    FlightPlanSemanticValidator ..> SemanticValidationResult : produces
+    FlightPlanSemanticValidator --> ErrorCollector : shares with rules
+    SemanticValidationResult    o-- "*" SemanticError
+    SemanticError               *-- SemanticErrorCode
+}
+
+' ============================================================
+' Rule family — Strategy pattern
+' ============================================================
+package "lapr4.lprog.flightdsl.semantic.rules" {
+    interface SemanticRule <<interface>> {
+        +check(FlightPlanFile, ErrorCollector) : void
+    }
+    class FlightLevelRule {
+        ' S: FLIGHT_ID_NOT_UNIQUE, FLIGHT_TYPE_INVALID
+    }
+    class LegLevelRule {
+        ' S: FLIGHT_MISSING_LEGS, LEG_MISSING_*,\n'     FUEL_NOT_POSITIVE
+    }
+    class LegSequenceRule {
+        ' S: LEG_SEQUENCE_AIRPORT_MISMATCH,\n'     LEG_SEQUENCE_TIME_NOT_ORDERED
+    }
+    class RouteCoherenceRule {
+        ' S: ROUTE_ORIGIN_MISMATCH,\n'     ROUTE_DESTINATION_MISMATCH,\n'     ROUTE_AIRPORT_REPEATED
+    }
+    class SegmentCoherenceRule {
+        ' S: SEGMENT_START_EQUALS_END
+    }
+    class DomainConsistencyRule {
+        ' S: AIRPORT_CODE_BAD_FORMAT,\n'     NUMERIC_NOT_POSITIVE,\n'     DATETIME_INVALID_CALENDAR
+    }
+
+    FlightLevelRule      ..|> SemanticRule
+    LegLevelRule         ..|> SemanticRule
+    LegSequenceRule      ..|> SemanticRule
+    RouteCoherenceRule   ..|> SemanticRule
+    SegmentCoherenceRule ..|> SemanticRule
+    DomainConsistencyRule ..|> SemanticRule
+
+    FlightPlanSemanticValidator o-- "6" SemanticRule : RULES list
+}
+
+' ============================================================
+' AST — produced by the ANTLR visitor (US083 / aisafe.flightplandsl)
+' ============================================================
+package "lapr4.lprog.flightdsl.ast" {
+    class FlightPlanFile <<record>>
+    class Flight        <<record>>
+    class Route         <<record>>
+    class Leg           <<record>>
+    class Departure     <<record>>
+    class Arrival       <<record>>
+    class AirportRef    <<record>>
+    class Fuel          <<record>>
+    class Segment       <<record>>
+    class Slot          <<record>>
+    class Wind          <<record>>
+    class Coordinate    <<record>>
+    class Length        <<record>>
+    class TemporalLiteral <<record>>
+    class Position      <<record>> {
+        +line : int
+        +column : int
+        +UNKNOWN : Position
+    }
+    enum FlightType <<enum>> {
+        REGULAR
+        CHARTER
+    }
+    enum FuelUnit <<enum>> {
+        KG
+        L
+    }
+
+    FlightPlanFile  *-- "1..*" Flight
+    Flight          *-- FlightType
+    Flight          *-- Route
+    Flight          *-- "1..*" Leg
+    Route           o-- "2" AirportRef
+    Leg             *-- Departure
+    Leg             *-- Arrival
+    Leg             *-- Fuel
+    Leg             *-- "1..*" Segment
+    Departure       *-- AirportRef
+    Departure       *-- TemporalLiteral
+    Arrival         *-- AirportRef
+    Arrival         *-- TemporalLiteral
+    Fuel            *-- FuelUnit
+    Segment         *-- "2" Coordinate
+    Segment         *-- "1..*" Slot
+    Segment         *-- Wind
+    Slot            *-- "2" Length
+}
+
+' ============================================================
+' Cross-package wiring
+' ============================================================
+FlightPlanSemanticValidator ..> FlightPlanFile : consumes AST
+SemanticRule                ..> FlightPlanFile : reads
+SemanticRule                ..> ErrorCollector : writes to
+
+@enduml

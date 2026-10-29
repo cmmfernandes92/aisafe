@@ -1,0 +1,85 @@
+@startuml
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+autonumber
+
+title Create Aircraft Model
+
+actor "Backoffice Operator" as BO
+participant ":AircraftModelUI" as UI <<presentation>>
+participant ":CreateAircraftModelController" as CTRL <<application>>
+participant ":AircraftModelRepository" as AMR <<persistence>>
+participant ":EngineModelRepository" as EMR <<persistence>>
+participant ":MakerRepository" as MR <<persistence>>
+participant ":AircraftModel" as AM <<domain>>
+
+activate BO
+
+== Phase 1: Load reference data ==
+
+BO -> UI : asks to register\nan aircraft model
+activate UI
+
+UI -> CTRL : create()
+activate CTRL
+
+CTRL -> MR : findAircraftMakers()
+activate MR
+MR --> CTRL : makers
+deactivate MR
+
+CTRL -> EMR : findCertifiedActiveEngineModels()
+activate EMR
+EMR --> CTRL : engineModels
+deactivate EMR
+
+CTRL --> UI : makers, engineModels
+UI --> BO : shows available makers\nand engine models
+deactivate UI
+
+== Phase 2: Define aircraft model ==
+
+BO -> UI : enters aircraft model data\nand selects engine models
+activate UI
+
+UI -> CTRL : createAircraftModel(modelId, modelName, makerId,\ntype, motorization, maximumRange,\nemptyWeight, mtow, mzfw,\nmaxFuelCapacity, serviceCeiling,\ncruiseSpeed, wingArea,\ndragCoefficient, liftCoefficient,\nengineModelIds)
+
+CTRL -> AMR : existsByNameAndMaker(modelName, makerId)
+activate AMR
+AMR --> CTRL : false
+deactivate AMR
+
+CTRL -> MR : findById(makerId)
+activate MR
+MR --> CTRL : maker
+deactivate MR
+
+CTRL -> EMR : findByIds(engineModelIds)
+activate EMR
+EMR --> CTRL : engineModels
+deactivate EMR
+
+CTRL -> AM ** : create(modelId, modelName, maker,\ntype, motorization, maximumRange,\nemptyWeight, mtow, mzfw,\nmaxFuelCapacity, serviceCeiling,\ncruiseSpeed, wingArea,\ndragCoefficient, liftCoefficient,\nengineModels)
+
+note right of AM
+  Validates (Information Expert):
+  - model name + maker is unique
+  - at least one engine model exists
+  - at least one certified engine model exists
+  - all associated engine models are compatible
+    with the aircraft model motorization/type
+end note
+
+CTRL -> AMR : save(aircraftModel)
+activate AMR
+AMR --> CTRL : aircraftModel
+deactivate AMR
+
+CTRL --> UI : aircraftModel
+deactivate CTRL
+
+UI --> BO : shows successful creation
+deactivate UI
+deactivate BO
+
+@enduml

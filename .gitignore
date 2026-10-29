@@ -1,0 +1,30 @@
+# Build output
+target/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Maven
+*.log
+scomp/sprint-3/flight_sim/runs/*
+!scomp/sprint-3/flight_sim/runs/.gitkeep
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# Local tools
+libs/
+.claude/
+
+# SCOMP build output
+*.o
+scomp/sprint-3/flight_sim/flight_sim

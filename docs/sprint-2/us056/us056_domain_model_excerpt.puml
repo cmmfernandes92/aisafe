@@ -1,0 +1,51 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>> #95A5A6
+    FontColor<<external>> #1A1A1A
+}
+
+hide empty members
+
+package "EngineModel Aggregate" {
+    class EngineModel <<aggregate root>> {
+        engineModelName
+        power
+        efficiency
+    }
+    enum MotorizationType <<enum>> {
+        TURBOPROP
+        TURBOFAN
+        TURBOJET
+        RAMJET
+        ELECTRIC_PROPELLER
+    }
+    enum FuelType <<enum>> {
+    }
+
+    EngineModel *-- MotorizationType
+    EngineModel *-- FuelType
+}
+
+' External aggregates referenced by EngineModel
+package "Maker Aggregate" {
+    class Maker <<aggregate root>> <<external>>
+}
+
+EngineModel --> Maker : manufactured by
+
+note right of EngineModel
+  Invariants:
+  - engineModelName + manufacturer must be unique
+end note
+
+@enduml

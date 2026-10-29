@@ -1,0 +1,150 @@
+@startuml class-diagram-us077
+title US077 – Deactivate a Pilot (design)
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>>     #95A5A6
+    FontColor<<external>>       #1A1A1A
+    BackgroundColor<<new>>      #D5F5E3
+    BorderColor<<new>>          #58D68D
+}
+
+' ============================================
+' PRESENTATION (aisafe.app.atcc.console)
+' ============================================
+package "Presentation" {
+    class DeactivatePilotAction <<Command>> <<new>> {
+        + execute() : boolean
+    }
+    class DeactivatePilotUI <<new>> {
+        - controller : DeactivatePilotController
+        --
+        + doShow() : boolean
+        + headline() : String
+    }
+    class ConsoleAssignedFlightsReporter <<new>> {
+        + report(flights : List<AssignedFlightDTO>) : void
+    }
+}
+
+' ============================================
+' APPLICATION (aisafe.core — pilotmanagement)
+' ============================================
+package "Application" {
+    class DeactivatePilotController <<UseCaseController>> <<new>> {
+        - authz : AuthorizationService
+        - pilotRepository : PilotRepository
+        - flightRepository : FlightRepository
+        - userRepository : UserRepository
+        - collaboratorRepository : CollaboratorRepository
+        --
+        + listActivePilotsOfMyCompany() : Iterable<Pilot>
+        + deactivatePilot(\n  pilotEmail : String,\n  reporter : AssignedFlightsReporter\n) : void
+        - allActivePilots() : Iterable<Pilot>
+        - buildAssignedFlightDTOs(email : Email) : List<AssignedFlightDTO>
+        - authenticatedUserEmail() : Email
+        - authenticatedCompanyCode() : CompanyIATACode
+    }
+    interface AssignedFlightsReporter <<Strategy>> <<new>> {
+        + report(flights : List<AssignedFlightDTO>) : void
+    }
+    class AssignedFlightDTO <<record>> <<new>> {
+        + routeName : String
+        + departureDate : LocalDate
+        + aircraftRegistration : String
+    }
+}
+
+' ============================================
+' DOMAIN – Pilot Aggregate (aisafe.core)
+' US075 aggregate; deactivate() is <<new>>
+' ============================================
+package "Domain" {
+    class Pilot <<aggregate root>> {
+        - status : PilotStatus
+        + deactivate() : void <<new>>
+        + isActive() : boolean
+    }
+    enum PilotStatus {
+        ACTIVE
+        INACTIVE
+    }
+    class Email <<value object>> <<external>>
+    class CompanyIATACode <<value object>> <<external>>
+
+    interface PilotRepository <<external>> {
+        + ofIdentity(email : Email) : Optional<Pilot>
+        + save(pilot : Pilot) : Pilot
+        + findAllActivePilotsByCompanyCode(\n  code : CompanyIATACode\n) : Iterable<Pilot> <<new>>
+        + findAllActivePilots() : Iterable<Pilot> <<new>>
+    }
+
+    ' Referenced aggregate – read-only
+    class Flight <<aggregate root>> <<external>>
+    interface FlightRepository <<external>> {
+        + flightsOf(pilot : Email) : Iterable<Flight>
+    }
+}
+
+' ============================================
+' PERSISTENCE (aisafe.persistence.impl)
+' ============================================
+package "Persistence" {
+    class JpaPilotRepository <<external>> {
+        + findAllActivePilotsByCompanyCode(\n  code : CompanyIATACode\n) : Iterable<Pilot> <<new>>
+        + findAllActivePilots() : Iterable<Pilot> <<new>>
+    }
+    class JpaFlightRepository <<external>> {
+        + flightsOf(pilot : Email) : Iterable<Flight>
+    }
+}
+
+' ============================================
+' Relationships
+' ============================================
+DeactivatePilotAction ..> DeactivatePilotUI : launches
+DeactivatePilotUI ..> ConsoleAssignedFlightsReporter : creates
+DeactivatePilotUI ..> DeactivatePilotController : uses
+ConsoleAssignedFlightsReporter ..|> AssignedFlightsReporter
+
+DeactivatePilotController ..> PilotRepository : uses
+DeactivatePilotController ..> FlightRepository : uses
+DeactivatePilotController ..> AssignedFlightsReporter : invokes
+DeactivatePilotController ..> AssignedFlightDTO : <<creates>>
+
+Pilot --> PilotStatus : has
+JpaPilotRepository ..|> PilotRepository
+JpaFlightRepository ..|> FlightRepository
+
+note bottom of DeactivatePilotController
+    DIP: depends on repository interfaces,
+    not on JPA implementations.
+    Cross-aggregate guard (I3) lives here —
+    Pilot must not depend on FlightRepository.
+    The reporter is injected by the UI but invoked
+    from the controller (Strategy + OCP).
+end note
+
+note bottom of Pilot
+    deactivate() enforces I2:
+    throws IllegalStateException
+    if already INACTIVE.
+end note
+
+note bottom of AssignedFlightsReporter
+    Strategy (OCP): ConsoleAssignedFlightsReporter
+    is the console concrete. New output formats
+    require no changes to controller or UI.
+end note
+
+@enduml

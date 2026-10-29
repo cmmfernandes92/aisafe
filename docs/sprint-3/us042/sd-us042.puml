@@ -1,0 +1,98 @@
+@startuml sd-us042
+skinparam actorStyle awesome
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+autonumber
+
+title US042 – Import bulk weather data (realization)
+
+actor "Weather Person" as A
+participant ":ImportBulkWeatherDataController" as CTRL <<application>>
+participant ":AuthorizationService" as AUTH <<infrastructure>>
+participant ":AirControlAreaRepository" as ACAR <<persistence>>
+participant ":WeatherDataSourceReaderFactory" as FAC <<application>>
+participant "reader:WeatherDataSourceReader" as RD <<application>>
+participant "client:OpenMeteoClient" as OMC <<application>>
+participant "tx:TransactionalContext" as TX <<persistence>>
+participant ":WeatherDataRepository" as WDR <<persistence>>
+participant "report:ImportReport" as REP <<application>>
+
+activate A
+
+A -> CTRL : importFrom(areaCode,\nsourceType, dataSource, input)
+activate CTRL
+
+CTRL -> AUTH : ensureAuthenticatedUserHasAnyOf(WEATHER_PERSON)
+activate AUTH
+AUTH --> CTRL : ok
+deactivate AUTH
+note right of CTRL : T9 – authz at the application layer
+
+CTRL -> ACAR : findByCode(areaCode)
+activate ACAR
+ACAR --> CTRL : area
+deactivate ACAR
+note right of CTRL : I1 – target area must exist
+
+CTRL -> CTRL : request = WeatherImportRequest(\ninput, area.boundary())
+note right of CTRL : operator's file or time window + resolved area box
+
+CTRL -> FAC : readerFor(sourceType)
+activate FAC
+FAC --> CTRL : reader
+deactivate FAC
+note right of FAC : Strategy selection (CSV or Open-Meteo – OCP)
+
+CTRL -> RD : read(request)
+activate RD
+note right of RD
+  Adapter / boundary (T9): the concrete reader translates
+  the external source into raw rows and knows no area /
+  JPA / domain. The two concretes do disjoint work but
+  converge on the same RawWeatherReading list.
+end note
+alt reader is CsvWeatherDataSourceReader
+    RD -> RD : parse header + each line\ninto RawWeatherReading
+    note right of RD : day/start/end taken from the file rows
+else reader is OpenMeteoWeatherDataSourceReader
+    loop for each grid cell over request.areaBounds()
+        RD -> OMC : fetch(uri(centroid, levels, window))
+        activate OMC
+        OMC --> RD : JSON (wind per pressure level)
+        deactivate OMC
+        RD -> RD : map bands -> pressure levels,\nnormalize centroid sample into rows
+    end
+    note right of RD : day/start/end taken from the request window
+end
+RD --> CTRL : List<RawWeatherReading>
+deactivate RD
+
+CTRL -> TX : beginTransaction()
+note right of CTRL : TP6 – one tx per batch; the TransactionalContext\nis created by the UI/composition root and injected\nat construction (controller only begins/commits it)
+
+loop for each raw : RawWeatherReading
+    CTRL -> CTRL : weatherData = assemble(area, raw)
+    note right of CTRL
+      VOs re-validate every cell at construction
+      (domain primitives, fail-fast).
+    end note
+    alt raw is valid
+        CTRL -> WDR : save(weatherData)
+        activate WDR
+        WDR --> CTRL : saved
+        deactivate WDR
+        CTRL -> REP : imported(raw)
+    else IllegalArgumentException
+        CTRL -> REP : skipped(rowIndex, reason)
+        note right of REP : I9 – fail-soft, batch continues (US042.4)
+    end
+end
+
+CTRL -> TX : commit()
+
+CTRL --> A : report (imported = N, skipped = M)
+deactivate CTRL
+
+deactivate A
+
+@enduml

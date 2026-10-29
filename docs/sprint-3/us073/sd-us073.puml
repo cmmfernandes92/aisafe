@@ -1,0 +1,116 @@
+@startuml sd-us073
+skinparam actorStyle awesome
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+autonumber
+
+title US073 – Create a Flight Route (realization)
+
+actor "Air Transport Company\nCollaborator" as A
+participant ":CreateFlightRouteUI" as UI <<presentation>>
+participant ":CreateFlightRouteController" as CTRL <<application>>
+participant ":AuthorizationService" as AUTH <<infrastructure>>
+participant ":UserRepository" as USERS <<persistence>>
+participant ":CollaboratorRepository" as COLLAB <<persistence>>
+participant ":AirTransportCompanyRepository" as COMPANY <<persistence>>
+participant ":AirportRepository" as AIRPORTS <<persistence>>
+participant ":FlightRouteRepository" as ROUTES <<persistence>>
+participant "route:FlightRoute" as ROUTE <<domain>>
+
+activate A
+
+A -> UI : starts "Create flight route"
+activate UI
+UI --> A : prompt for routeName, originCode, destinationCode
+deactivate UI
+
+A -> UI : routeName, originCode, destinationCode
+activate UI
+
+UI -> CTRL : createFlightRoute(routeName, originCode, destinationCode)
+activate CTRL
+
+CTRL -> AUTH : ensureAuthenticatedUserHasAnyOf(ATCC)
+activate AUTH
+AUTH --> CTRL : ok
+deactivate AUTH
+note right of CTRL : authz at the application layer
+
+CTRL -> AUTH : session().authenticatedUser()
+activate AUTH
+AUTH --> CTRL : systemUser
+deactivate AUTH
+
+CTRL -> USERS : findBySystemUser(systemUser)
+activate USERS
+USERS --> CTRL : aisafeUser
+deactivate USERS
+
+CTRL -> COLLAB : findCompanyCollaboratorByEmail(aisafeUser.identity())
+activate COLLAB
+COLLAB --> CTRL : companyCode
+deactivate COLLAB
+
+CTRL -> COMPANY : findByIataCode(companyCode)
+activate COMPANY
+COMPANY --> CTRL : company
+deactivate COMPANY
+
+CTRL -> CTRL : RouteName.valueOf(routeName)
+note right of CTRL
+  RouteName constructor enforces:
+  I6 – format [A-Z]{2}[0-9]{1,4}
+end note
+
+CTRL -> CTRL : validate name.value().startsWith(company.iataCode().value())
+note right of CTRL : I3 – prefix must match authenticated company
+
+CTRL -> ROUTES : existsByName(name)
+activate ROUTES
+ROUTES --> CTRL : false (uniqueness OK – I1 holds)
+deactivate ROUTES
+
+alt originCode length == 4 (ICAO)
+    CTRL -> AIRPORTS : findByIcaoCode(new AirportICAOCode(originCode))
+else originCode length == 3 (IATA)
+    CTRL -> AIRPORTS : findByIataCode(new AirportIATACode(originCode))
+end
+activate AIRPORTS
+AIRPORTS --> CTRL : originAirport
+deactivate AIRPORTS
+note right of CTRL : I4 – origin airport must exist
+
+alt destinationCode length == 4 (ICAO)
+    CTRL -> AIRPORTS : findByIcaoCode(new AirportICAOCode(destinationCode))
+else destinationCode length == 3 (IATA)
+    CTRL -> AIRPORTS : findByIataCode(new AirportIATACode(destinationCode))
+end
+activate AIRPORTS
+AIRPORTS --> CTRL : destinationAirport
+deactivate AIRPORTS
+note right of CTRL : I5 – destination airport must exist
+
+CTRL -> ROUTE : new FlightRoute(name, company,\n  originAirport, destinationAirport)
+activate ROUTE
+note right of ROUTE
+  Aggregate constructor enforces:
+  I2 – origin ≠ destination
+  I7 – no null fields
+end note
+ROUTE --> CTRL : route
+deactivate ROUTE
+
+CTRL -> ROUTES : save(route)
+activate ROUTES
+ROUTES --> CTRL : route (persisted)
+deactivate ROUTES
+
+CTRL --> UI : route
+deactivate CTRL
+
+UI --> A : "Flight route created: [route]"
+deactivate UI
+
+deactivate A
+
+@enduml

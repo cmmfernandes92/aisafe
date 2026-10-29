@@ -1,0 +1,37 @@
+@startuml
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+left to right direction
+
+package "Pilot Aggregate" {
+    class Pilot <<aggregate root>>
+
+    class PilotCertification <<entity>>
+
+    enum PilotStatus <<enum>> {
+        ACTIVE
+        INACTIVE
+    }
+
+    Pilot *-- PilotStatus
+    Pilot *-- "1..*" PilotCertification
+}
+
+' Cross-aggregate references
+class AirTransportCompany <<aggregate root>> #White
+class User <<aggregate root>> #White
+class AircraftModel <<aggregate root>> #White
+
+Pilot --> AirTransportCompany : belongs to
+Pilot --> User : identity
+PilotCertification --> AircraftModel : certified for
+
+@enduml

@@ -1,0 +1,44 @@
+<tbody th:fragment="rows(aircraftRows)" id="aircraft-tbody">
+  <tr th:each="aircraft : ${aircraftRows}">
+    <td class="mono" th:text="${aircraft.registration()}">CS-TNA</td>
+    <td>
+      <span th:text="${aircraft.modelName()}">A320</span>
+      <small class="mono" th:text="| #${aircraft.modelId()}|"> #1</small>
+    </td>
+    <td th:text="${aircraft.makerName()}">Airbus</td>
+    <td class="mono" th:text="${aircraft.economySeats()}">150</td>
+    <td class="mono" th:text="${aircraft.businessSeats()}">12</td>
+    <td class="mono" th:text="${aircraft.firstClassSeats()}">0</td>
+    <td class="mono" th:text="${aircraft.totalSeats()}">162</td>
+    <td th:text="${aircraft.registrationCountry()}">Portugal</td>
+    <td class="mono" th:text="${aircraft.status()}">ACTIVE</td>
+  </tr>
+  <tr th:if="${#lists.isEmpty(aircraftRows)}">
+    <td colspan="9" class="empty">No aircraft registered.</td>
+  </tr>
+</tbody>
+
+<th:block th:fragment="action-result">
+  <div th:class="${success} ? 'alert ok' : 'alert error'" role="status">
+    <span th:text="${message}">Aircraft updated.</span>
+  </div>
+  <tbody id="aircraft-tbody" hx-swap-oob="true">
+    <tr th:each="aircraft : ${aircraftRows}">
+      <td class="mono" th:text="${aircraft.registration()}">CS-TNA</td>
+      <td>
+        <span th:text="${aircraft.modelName()}">A320</span>
+        <small class="mono" th:text="| #${aircraft.modelId()}|"> #1</small>
+      </td>
+      <td th:text="${aircraft.makerName()}">Airbus</td>
+      <td class="mono" th:text="${aircraft.economySeats()}">150</td>
+      <td class="mono" th:text="${aircraft.businessSeats()}">12</td>
+      <td class="mono" th:text="${aircraft.firstClassSeats()}">0</td>
+      <td class="mono" th:text="${aircraft.totalSeats()}">162</td>
+      <td th:text="${aircraft.registrationCountry()}">Portugal</td>
+      <td class="mono" th:text="${aircraft.status()}">ACTIVE</td>
+    </tr>
+    <tr th:if="${#lists.isEmpty(aircraftRows)}">
+      <td colspan="9" class="empty">No aircraft registered.</td>
+    </tr>
+  </tbody>
+</th:block>

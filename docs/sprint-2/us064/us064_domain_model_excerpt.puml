@@ -1,0 +1,58 @@
+@startuml us064_domain_model_excerpt
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+skinparam noteBackgroundColor #FFF8DC
+skinparam noteBorderColor #B8860B
+hide empty members
+
+package "Collaborator Aggregate" {
+    abstract class Collaborator <<aggregate root>>
+    class CompanyCollaborator
+    class AreaCollaborator
+    class Position <<value object>>
+    enum CollaboratorStatus <<enum>> {
+        ACTIVE
+        DISABLED
+    }
+
+    CompanyCollaborator --|> Collaborator
+    AreaCollaborator --|> Collaborator
+
+    Collaborator *-- Position
+    Collaborator *-- CollaboratorStatus
+
+    note right of Collaborator
+        US064: disable() transitions status ACTIVE → DISABLED.
+        Invariant CC3: DISABLED collaborators must not appear
+        in active listings — enforced by repository JPQL query.
+        Idempotency: disable() throws if already DISABLED.
+    end note
+
+    note right of CollaboratorStatus
+        Transition allowed: ACTIVE → DISABLED only.
+        No reverse transition (re-enable) in this sprint.
+    end note
+}
+
+' External aggregates
+class User #lightgrey {
+    + systemUser() : SystemUser
+}
+class SystemUser #lightgrey {
+    deactivated on disable (US064.AC2)
+}
+class AirTransportCompany #lightgrey
+class AirControlArea #lightgrey
+
+Collaborator --> User : identity
+CompanyCollaborator --> AirTransportCompany : references by CompanyIATACode
+AreaCollaborator --> AirControlArea : references by AreaCode
+User *-- SystemUser
+
+@enduml

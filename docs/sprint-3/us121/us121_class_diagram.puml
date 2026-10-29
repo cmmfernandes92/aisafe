@@ -1,0 +1,151 @@
+@startuml us121_class_diagram
+title US121 - Create Flight Plan from File - Class Diagram
+
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam packageStyle rectangle
+hide empty members
+left to right direction
+
+' ============================================================
+' Presentation layer (pilot console)
+' ============================================================
+package "eapli.aisafe.app.pilot.console.presentation.flightplan" {
+    class ImportFlightPlanAction {
+        +execute() : boolean
+    }
+    class ImportFlightPlanUI {
+        -controller : ImportFlightPlanController
+        +doShow() : boolean
+        +headline() : String
+    }
+
+    ImportFlightPlanAction ..> ImportFlightPlanUI : creates & shows
+}
+
+' ============================================================
+' Application layer
+' ============================================================
+package "eapli.aisafe.flightmanagement.application" {
+    class ImportFlightPlanController <<UseCaseController>> {
+        -repository : FlightRepository
+        -authz : AuthorizationService
+        +flightsOfAuthenticatedPilot() : Iterable<Flight>
+        +importFlightPlan(flightId, rawDslContent) : Flight
+    }
+}
+
+' ============================================================
+' Domain layer - Flight aggregate (owns the FlightPlan)
+' ============================================================
+package "eapli.aisafe.flightmanagement.domain" {
+    class Flight <<aggregate root>> {
+        -id : FlightId
+        -pilot : Email
+        +identity() : FlightId
+        +pilot() : Email
+        +currentPlan() : FlightPlan
+        +importDsl(rawDslContent, importedBy) : void
+    }
+
+    class FlightPlan <<entity>> {
+        -status : FlightPlanStatus
+        -rawDslContent : String
+        -importedAt : LocalDateTime
+        -importedBy : String
+        +status() : FlightPlanStatus
+        +rawDslContent() : String
+    }
+
+    enum FlightPlanStatus <<enum>> {
+        DRAFT
+        VALIDATED
+        TESTED
+    }
+
+    class FlightId <<value object>> <<embeddable>> {
+        -routeName : RouteName
+        -departureDate : LocalDate
+    }
+
+    Flight *-- "1..*" FlightPlan
+    Flight *-- FlightId
+    FlightPlan *-- FlightPlanStatus
+}
+
+' ============================================================
+' Repository
+' ============================================================
+package "eapli.aisafe.flightmanagement.repositories" {
+    interface FlightRepository <<interface>> {
+        +ofIdentity(FlightId) : Optional<Flight>
+        +flightsOf(Email) : Iterable<Flight>
+        +save(Flight) : Flight
+    }
+}
+
+' ============================================================
+' US120 DSL module - consumed by UI, not by controller
+' ============================================================
+package "eapli.aisafe.flightplanmanagement.dsl" <<external>> #FFF8DC {
+    interface FlightPlanImporter <<interface>> {
+        +importFrom(InputStream, String) : CompilationResult
+    }
+    class FlightPlanImporterFactory {
+        +{static} forPath(Path) : Optional<FlightPlanImporter>
+        +{static} supportedExtensions() : Set<String>
+    }
+    class FlightDslCompiler {
+        +compile(Path) : CompilationResult
+        +importFrom(InputStream, String) : CompilationResult
+    }
+    class CompilationResult <<record>> {
+        +ok() : boolean
+        +file() : Optional<FlightPlanFile>
+        +errors() : List<DslError>
+    }
+    class FlightPlanFile <<record>> {
+        +flightPlans() : List<FlightPlanDTO>
+    }
+    class DslError <<record>> {
+        +phase() : Phase
+        +code() : String
+        +line() : int
+        +column() : int
+        +message() : String
+    }
+    class FlightPlanDTO <<record>> {
+        +designator() : FlightDesignator
+        +type() : FlightType
+        +route() : Route
+        +legs() : List<FlightLeg>
+    }
+
+    FlightDslCompiler ..|> FlightPlanImporter
+    FlightPlanImporterFactory ..> FlightPlanImporter : creates by extension
+    FlightPlanImporter ..> CompilationResult : produces
+    CompilationResult o-- "*" DslError
+    CompilationResult o-- "0..1" FlightPlanFile
+    FlightPlanFile o-- "1..*" FlightPlanDTO
+}
+
+' ============================================================
+' Cross-layer wiring
+' ============================================================
+ImportFlightPlanUI ..> ImportFlightPlanController : lists own flights, selects target, imports
+ImportFlightPlanUI ..> FlightPlanImporterFactory  : resolves importer by extension
+ImportFlightPlanUI ..> FlightPlanImporter          : validates file
+ImportFlightPlanUI ..> FlightPlanFile              : reads validated plans
+ImportFlightPlanUI ..> FlightPlanDTO               : reads summary
+
+ImportFlightPlanController ..> FlightRepository : flightsOf / ofIdentity / save
+ImportFlightPlanController ..> Flight           : checks ownership, imports DSL & promotes
+
+note bottom of Flight
+  US080 creates the Flight with an empty DRAFT plan.
+  US121 imports the validated DSL into that draft and
+  promotes it DRAFT -> VALIDATED, only for a flight the
+  authenticated pilot owns. Creation never happens here.
+end note
+
+@enduml

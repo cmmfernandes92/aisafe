@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<article th:fragment="card(title, refreshUrl, refreshTarget, refreshLabel, tableHead, tableRows)" class="card table-card">
+  <div class="card-head">
+    <h2 th:text="${title}">Registered Items</h2>
+    <button class="refresh-action" type="button" th:aria-label="${refreshLabel}" title="Refresh"
+            th:attr="hx-get=${refreshUrl}, hx-target=${refreshTarget}" hx-swap="outerHTML">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M20 11a8 8 0 1 0-2.3 5.7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <path d="M20 4v7h-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="refresh-text">Refresh</span>
+    </button>
+  </div>
+  <table class="sortable-table">
+    <thead th:replace="${tableHead}"></thead>
+    <tbody th:replace="${tableRows}"></tbody>
+  </table>
+</article>
+</body>
+</html>

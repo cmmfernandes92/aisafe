@@ -1,0 +1,55 @@
+@startuml
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+left to right direction
+
+package "Aircraft Aggregate" {
+    class Aircraft <<aggregate root>> {
+        registrationCountry
+        crewCount
+    }
+
+    class Registration <<value object>>
+    class CabinConfiguration <<value object>>
+
+    abstract class SeatCount <<value object>>
+    class EconomySeats <<value object>>
+    class BusinessSeats <<value object>>
+    class FirstClassSeats <<value object>>
+
+    enum OperationalStatus <<enum>> {
+        ACTIVE
+        RETIRED
+    }
+
+    Aircraft *-- Registration
+    Aircraft *-- CabinConfiguration
+    Aircraft *-- OperationalStatus
+
+    EconomySeats --|> SeatCount
+    BusinessSeats --|> SeatCount
+    FirstClassSeats --|> SeatCount
+
+    CabinConfiguration *-- "1" EconomySeats
+    CabinConfiguration *-- "0..1" BusinessSeats
+    CabinConfiguration *-- "0..1" FirstClassSeats
+}
+
+' Cross-aggregate references
+class AircraftModel <<aggregate root>> #White
+class EngineModel <<aggregate root>> #White
+class AirTransportCompany <<aggregate root>> #White
+
+Aircraft --> AircraftModel : is of model
+Aircraft --> EngineModel : uses
+Aircraft --> AirTransportCompany : belongs to
+
+@enduml

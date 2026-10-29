@@ -1,0 +1,660 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Poppins:wght@500;600;700&display=swap");
+
+:root {
+  --bg: #070b14;
+  --panel: #101827;
+  --panel-2: #0c1220;
+  --line: #27324d;
+  --line-soft: rgba(58, 70, 100, 0.48);
+  --text: #e5ecf7;
+  --muted: #94a3b8;
+  --muted-2: #64748b;
+  --cyan: #00e5ff;
+  --purple: #7b61ff;
+  --pink: #ff4d9d;
+  --green: #3ee6a8;
+  --red: #fb7185;
+  --amber: #ffb547;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Inter, system-ui, sans-serif; color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+.app-shell {
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-image:
+    linear-gradient(rgba(123,97,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+.backdrop {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(70% 60% at 25% 20%, rgba(0,229,255,0.12), transparent 62%),
+    radial-gradient(70% 60% at 80% 75%, rgba(123,97,255,0.12), transparent 62%),
+    radial-gradient(55% 40% at 86% 20%, rgba(255,77,157,0.08), transparent 70%);
+}
+.mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+.muted { color: var(--muted); }
+.small { font-size: 0.85rem; }
+.eyebrow { color: var(--cyan); font: 700 0.72rem "JetBrains Mono", ui-monospace, monospace; letter-spacing: 0.16em; text-transform: uppercase; }
+
+/* z-index sits above the full-bleed simulator content (control strip z-1000,
+   area menu z-1200) so the module switcher and Logout stay clickable there. */
+.topbar { height: 64px; display: flex; align-items: center; border-bottom: 1px solid rgba(39,50,77,0.8); background: rgba(12,18,32,0.88); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 2000; }
+.brand { width: 260px; height: 64px; display: flex; align-items: center; gap: 12px; padding: 0 20px; border-right: 1px solid rgba(39,50,77,0.8); color: var(--text); text-decoration: none; }
+.brand-logo {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  object-fit: contain;
+  flex: 0 0 auto;
+  background: transparent !important;
+  border-radius: 0;
+  box-shadow: none;
+}
+.brand strong {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font: 400 1.32rem Inter, system-ui, sans-serif;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+.brand i { color: var(--pink); font-style: normal; }
+.sidebar-toggle { margin-left: 16px; width: 32px; min-height: 32px; padding: 0; display: grid; place-items: center; color: var(--muted); background: rgba(16,24,39,0.7); border: 1px solid var(--line-soft); }
+.sidebar-toggle:hover { color: var(--cyan); border-color: rgba(0,229,255,0.45); }
+.breadcrumb { display: flex; align-items: center; gap: 10px; margin-left: 18px; }
+.breadcrumb b { font: 600 0.86rem Inter, sans-serif; }
+.breadcrumb em { color: var(--muted-2); font: 500 0.68rem "JetBrains Mono", monospace; letter-spacing: 0.12em; text-transform: uppercase; font-style: normal; }
+.module-switcher { position: relative; margin-left: 18px; }
+.module-switcher details { position: relative; }
+.module-switcher summary {
+  width: 210px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  padding: 0 36px 0 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  background: rgba(16,24,39,0.72);
+  cursor: pointer;
+  list-style: none;
+  white-space: nowrap;
+}
+.module-switcher summary::-webkit-details-marker { display: none; }
+.module-switcher summary::after {
+  content: "";
+  position: absolute;
+  right: 13px;
+  top: 15px;
+  width: 8px;
+  height: 8px;
+  border-right: 1px solid var(--muted);
+  border-bottom: 1px solid var(--muted);
+  transform: rotate(45deg);
+}
+.module-switcher details[open] summary { border-color: rgba(0,229,255,0.45); }
+.module-switcher summary span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font: 700 0.82rem Inter, sans-serif;
+  color: var(--text);
+}
+.module-menu {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 210px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(12,18,32,0.98);
+  box-shadow: 0 18px 44px rgba(0,0,0,0.34);
+}
+.module-menu a {
+  display: block;
+  padding: 10px 11px;
+  border-radius: 6px;
+  color: var(--muted);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 700 0.82rem Inter, sans-serif;
+}
+.module-menu a:hover, .module-menu a.active { background: rgba(0,229,255,0.08); color: var(--text); }
+.module-menu a.active { outline: 1px solid rgba(0,229,255,0.25); }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; padding-right: 20px; }
+.status-dot { width: 7px; height: 7px; border-radius: 999px; background: var(--green); box-shadow: 0 0 14px rgba(62,230,168,0.7); }
+.role, .username { border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; color: var(--muted); font: 500 0.74rem "JetBrains Mono", monospace; }
+
+.layout { display: flex; }
+.sidebar { width: 260px; min-height: calc(100vh - 64px); border-right: 1px solid rgba(39,50,77,0.8); background: rgba(12,18,32,0.72); padding: 20px 0; position: sticky; top: 64px; align-self: flex-start; }
+#sidebar, #brand-block { transition: width 180ms cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; white-space: nowrap; }
+body.sidebar-collapsed #sidebar,
+body.sidebar-collapsed #brand-block { width: 68px !important; }
+body.sidebar-collapsed .brand-text,
+body.sidebar-collapsed .breadcrumb,
+body.sidebar-collapsed .nav-label,
+body.sidebar-collapsed .nav-section,
+body.sidebar-collapsed .sidebar-note { display: none; }
+body.sidebar-collapsed #brand-block { padding-left: 20px; padding-right: 4px; justify-content: flex-start; gap: 0; }
+body.sidebar-collapsed .sidebar .nav-row { justify-content: center; padding-left: 0; padding-right: 0; gap: 0; }
+.nav-section { padding: 0 20px 10px; color: var(--muted-2); font: 600 0.62rem "JetBrains Mono", monospace; letter-spacing: 0.18em; text-transform: uppercase; }
+.sidebar a { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 20px; border-left: 2px solid transparent; color: var(--muted); text-decoration: none; font-size: 0.86rem; }
+.sidebar a.active { color: var(--text); border-left-color: var(--cyan); background: rgba(0,229,255,0.08); }
+.sidebar a.disabled { opacity: 0.55; cursor: default; }
+.nav-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+.nav-icon { width: 44px; height: 44px; display: inline-block; border: 1px solid var(--muted-2); flex: 0 0 auto; }
+.nav-icon.dashboard,
+.nav-icon.air-control-areas,
+.nav-icon.airports,
+.nav-icon.aircraft-models,
+.nav-icon.engine-models,
+.nav-icon.register-weather-data,
+.nav-icon.import-weather-data,
+.nav-icon.consult-weather-data,
+.nav-icon.create-flight,
+.nav-icon.import-flight-plan,
+.nav-icon.run-area-simulation,
+.nav-icon.add-flight-weather,
+.nav-icon.test-flight-plan,
+.nav-icon.create-flight-route,
+.nav-icon.deactivate-flight-route,
+.nav-icon.pilots,
+.nav-icon.monthly-report,
+.nav-icon.simulation-report,
+.nav-icon.air-transport-companies,
+.nav-icon.collaborators,
+.nav-icon.users,
+.nav-icon.simulate-flight-plan,
+.nav-icon.simulate-area-flights {
+  border: 0;
+  background: var(--text);
+}
+.nav-icon.dashboard {
+  -webkit-mask: url("/img/nav/dashboard.png") center / contain no-repeat;
+  mask: url("/img/nav/dashboard.png") center / contain no-repeat;
+}
+.nav-icon.air-control-areas {
+  -webkit-mask: url("/img/nav/air-control-areas.png") center / contain no-repeat;
+  mask: url("/img/nav/air-control-areas.png") center / contain no-repeat;
+}
+.nav-icon.airports {
+  -webkit-mask: url("/img/nav/airports.png") center / contain no-repeat;
+  mask: url("/img/nav/airports.png") center / contain no-repeat;
+}
+.nav-icon.aircraft-models {
+  -webkit-mask: url("/img/nav/aircraft-models.png") center / contain no-repeat;
+  mask: url("/img/nav/aircraft-models.png") center / contain no-repeat;
+}
+.nav-icon.engine-models {
+  -webkit-mask: url("/img/nav/engine-models.png") center / contain no-repeat;
+  mask: url("/img/nav/engine-models.png") center / contain no-repeat;
+}
+.nav-icon.air-transport-companies {
+  -webkit-mask: url("/img/nav/air-transport-companies.png") center / contain no-repeat;
+  mask: url("/img/nav/air-transport-companies.png") center / contain no-repeat;
+}
+.nav-icon.collaborators {
+  -webkit-mask: url("/img/nav/collaborators.png") center / contain no-repeat;
+  mask: url("/img/nav/collaborators.png") center / contain no-repeat;
+}
+.nav-icon.users {
+  -webkit-mask: url("/img/nav/users.png") center / contain no-repeat;
+  mask: url("/img/nav/users.png") center / contain no-repeat;
+}
+.nav-icon.simulate-flight-plan {
+  -webkit-mask: url("/img/nav/simulate-flight-plan.png") center / contain no-repeat;
+  mask: url("/img/nav/simulate-flight-plan.png") center / contain no-repeat;
+}
+.nav-icon.simulate-area-flights {
+  -webkit-mask: url("/img/nav/simulate-area-flights.png") center / contain no-repeat;
+  mask: url("/img/nav/simulate-area-flights.png") center / contain no-repeat;
+}
+.nav-icon.register-weather-data {
+  -webkit-mask: url("/img/nav/register-weather-data.png") center / contain no-repeat;
+  mask: url("/img/nav/register-weather-data.png") center / contain no-repeat;
+}
+.nav-icon.import-weather-data {
+  -webkit-mask: url("/img/nav/import-weather-data.png") center / contain no-repeat;
+  mask: url("/img/nav/import-weather-data.png") center / contain no-repeat;
+}
+.nav-icon.consult-weather-data {
+  -webkit-mask: url("/img/nav/consult-weather-data.png") center / contain no-repeat;
+  mask: url("/img/nav/consult-weather-data.png") center / contain no-repeat;
+}
+.nav-icon.create-flight {
+  -webkit-mask: url("/img/nav/create-flight.png") center / contain no-repeat;
+  mask: url("/img/nav/create-flight.png") center / contain no-repeat;
+}
+.nav-icon.import-flight-plan {
+  -webkit-mask: url("/img/nav/import-flight-plan.png") center / contain no-repeat;
+  mask: url("/img/nav/import-flight-plan.png") center / contain no-repeat;
+}
+.nav-icon.run-area-simulation {
+  -webkit-mask: url("/img/nav/run-area-simulation.png") center / contain no-repeat;
+  mask: url("/img/nav/run-area-simulation.png") center / contain no-repeat;
+}
+.nav-icon.add-flight-weather {
+  -webkit-mask: url("/img/nav/add-flight-weather.png") center / contain no-repeat;
+  mask: url("/img/nav/add-flight-weather.png") center / contain no-repeat;
+}
+.nav-icon.test-flight-plan {
+  -webkit-mask: url("/img/nav/test-flight-plan.png") center / contain no-repeat;
+  mask: url("/img/nav/test-flight-plan.png") center / contain no-repeat;
+}
+.nav-icon.create-flight-route {
+  -webkit-mask: url("/img/nav/create-flight-route.png") center / contain no-repeat;
+  mask: url("/img/nav/create-flight-route.png") center / contain no-repeat;
+}
+.nav-icon.deactivate-flight-route {
+  -webkit-mask: url("/img/nav/deactivate-flight-route.png") center / contain no-repeat;
+  mask: url("/img/nav/deactivate-flight-route.png") center / contain no-repeat;
+}
+.nav-icon.pilots {
+  -webkit-mask: url("/img/nav/pilots.png") center / contain no-repeat;
+  mask: url("/img/nav/pilots.png") center / contain no-repeat;
+}
+.nav-icon.monthly-report {
+  -webkit-mask: url("/img/nav/monthly-report.png") center / contain no-repeat;
+  mask: url("/img/nav/monthly-report.png") center / contain no-repeat;
+}
+.nav-icon.simulation-report {
+  -webkit-mask: url("/img/nav/simulation-report.png") center / contain no-repeat;
+  mask: url("/img/nav/simulation-report.png") center / contain no-repeat;
+}
+.sidebar a.active .nav-icon.dashboard,
+.sidebar a.active .nav-icon.air-control-areas,
+.sidebar a.active .nav-icon.airports,
+.sidebar a.active .nav-icon.aircraft-models,
+.sidebar a.active .nav-icon.engine-models,
+.sidebar a.active .nav-icon.register-weather-data,
+.sidebar a.active .nav-icon.import-weather-data,
+.sidebar a.active .nav-icon.consult-weather-data,
+.sidebar a.active .nav-icon.create-flight,
+.sidebar a.active .nav-icon.import-flight-plan,
+.sidebar a.active .nav-icon.run-area-simulation,
+.sidebar a.active .nav-icon.add-flight-weather,
+.sidebar a.active .nav-icon.test-flight-plan,
+.sidebar a.active .nav-icon.create-flight-route,
+.sidebar a.active .nav-icon.deactivate-flight-route,
+.sidebar a.active .nav-icon.pilots,
+.sidebar a.active .nav-icon.monthly-report,
+.sidebar a.active .nav-icon.simulation-report,
+.sidebar a.active .nav-icon.air-transport-companies,
+.sidebar a.active .nav-icon.collaborators,
+.sidebar a.active .nav-icon.simulate-flight-plan,
+.sidebar a.active .nav-icon.simulate-area-flights {
+  background: linear-gradient(135deg, var(--cyan), var(--purple) 52%, var(--pink));
+}
+.sidebar a.active .nav-icon.ring,
+.sidebar a.active .nav-icon.engine {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 1px rgba(0,229,255,0.18), 0 0 18px rgba(0,229,255,0.22);
+}
+.nav-icon.square { border-radius: 8px; background: rgba(148,163,184,0.12); }
+.nav-icon.ring, .nav-icon.engine { border-radius: 999px; }
+.nav-icon.tower { border: none; border-bottom: 28px solid var(--muted-2); border-left: 10px solid transparent; border-right: 10px solid transparent; width: 28px; height: 36px; opacity: 0.8; }
+.nav-icon.aircraft { border: none; position: relative; }
+.nav-icon.aircraft::before, .nav-icon.aircraft::after { content: ""; position: absolute; background: var(--muted-2); left: 6px; right: 6px; top: 21px; height: 2px; }
+.nav-icon.aircraft::after { left: 21px; right: auto; top: 6px; bottom: 6px; width: 2px; height: auto; }
+.nav-icon.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; border: none; }
+.nav-icon.grid::before { content: ""; display: block; background: var(--muted-2); box-shadow: 24px 0 rgba(148,163,184,0.55), 0 24px rgba(148,163,184,0.55), 24px 24px var(--muted-2); }
+.nav-icon.people, .nav-icon.user { border-radius: 14px 14px 5px 5px; }
+.sidebar-note { margin: 28px 16px 0; padding: 14px; border: 1px solid var(--line-soft); border-radius: 8px; background: rgba(16,24,39,0.5); display: flex; gap: 10px; align-items: flex-start; }
+.sidebar-note span { width: 7px; height: 7px; margin-top: 4px; border-radius: 999px; background: var(--cyan); box-shadow: 0 0 14px rgba(0,229,255,0.5); flex: 0 0 auto; }
+.sidebar-note p { margin: 0; color: var(--muted-2); font-size: 0.78rem; line-height: 1.45; }
+
+.content { flex: 1; min-width: 0; padding: 28px; }
+.page-head { display: flex; align-items: end; justify-content: space-between; margin-bottom: 22px; }
+h1 { margin: 0; font-size: 2rem; letter-spacing: -0.02em; }
+h2 { margin: 0; font-size: 1rem; }
+.page-copy { margin: 8px 0 0; max-width: 780px; color: var(--muted-2); font-size: 0.9rem; }
+.card { background: linear-gradient(180deg, rgba(30,41,59,0.62), rgba(19,28,54,0.62)); border: 1px solid rgba(58,70,100,0.46); border-radius: 8px; padding: 18px; backdrop-filter: blur(6px); box-shadow: 0 18px 40px rgba(0,0,0,0.16); }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.card-head span { color: var(--muted-2); font: 500 0.68rem "JetBrains Mono", monospace; letter-spacing: 0.1em; text-transform: uppercase; }
+
+.kpi-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
+.kpi { min-height: 132px; position: relative; overflow: hidden; }
+.kpi::after { content: ""; position: absolute; inset: auto 0 0; height: 2px; background: linear-gradient(90deg, var(--cyan), var(--purple), var(--pink)); opacity: 0.75; }
+.kpi span { display: block; color: var(--muted); font-size: 0.78rem; }
+.kpi strong { display: block; margin: 9px 0; font-size: 2.1rem; line-height: 1; color: var(--cyan); font-family: "JetBrains Mono", monospace; }
+.kpi small { color: var(--muted-2); }
+.kpi.kpi-warn strong { color: var(--pink); }
+.kpi.kpi-warn::after { background: var(--pink); opacity: 0.75; }
+.kpi.kpi-accent strong { color: var(--green); }
+.kpi.kpi-accent::after { background: var(--green); opacity: 0.8; }
+/* Flight Control dashboard */
+.fc-cta { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.fc-soon { font: 600 0.68rem "JetBrains Mono", monospace; color: var(--amber); text-transform: uppercase; letter-spacing: 0.08em; }
+.fc-pipeline { display: grid; gap: 10px; margin: 4px 0 0; padding: 0; list-style: none; }
+.fc-pipeline li { padding: 10px 12px; border: 1px solid rgba(58,70,100,0.42); border-radius: 7px; background: rgba(12,18,32,0.42); }
+.fc-pipeline li.active { border-color: rgba(62,230,168,0.32); background: rgba(62,230,168,0.05); }
+.fc-pipeline strong { display: block; color: var(--cyan); font-size: 0.9rem; }
+.fc-pipeline span { display: block; margin-top: 3px; color: var(--muted); font-size: 0.82rem; }
+.fc-pipeline em { font-style: normal; }
+.button-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.button-row button { flex: 1 1 150px; }
+.result-panel { margin-top: 14px; }
+.run-result { display: grid; gap: 12px; }
+.path-list { display: grid; gap: 8px; margin: 0; }
+.path-list div { padding: 10px 12px; border: 1px solid rgba(58,70,100,0.42); border-radius: 7px; background: rgba(12,18,32,0.42); }
+.path-list dt { color: var(--muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.path-list dd { margin: 4px 0 0; }
+.path-value { color: var(--cyan); font: 500 0.72rem "JetBrains Mono", monospace; word-break: break-all; }
+.id-map { margin-top: 2px; }
+.grid-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-bottom: 18px; }
+.bar-list { display: grid; gap: 10px; }
+.bar-row { display: grid; grid-template-columns: 120px 1fr 42px; gap: 10px; align-items: center; color: var(--muted); font-size: 0.85rem; }
+.bar-row div { height: 8px; background: rgba(39,50,77,0.8); border-radius: 999px; overflow: hidden; }
+.bar-row i { display: block; height: 100%; min-width: 4px; max-width: 100%; background: linear-gradient(90deg, var(--cyan), #7b61ff); }
+.bar-row strong { color: var(--text); text-align: right; }
+
+.map-card { padding: 0; overflow: hidden; }
+.map-card .card-head { margin: 0; padding: 18px 20px; border-bottom: 1px solid rgba(58,70,100,0.35); }
+.legend-box { display: inline-block; width: 11px; height: 11px; margin-right: 5px; border: 1px solid var(--cyan); background: rgba(0,229,255,0.2); vertical-align: -1px; }
+.legend-box.missing { margin-left: 12px; border-color: var(--pink); background: rgba(255,77,157,0.18); }
+.legend-dot { display: inline-block; width: 7px; height: 7px; margin: 0 5px 0 12px; border-radius: 999px; background: var(--cyan); }
+.map-shell { display: grid; grid-template-columns: minmax(0, 1fr) 300px; }
+.map-wrap { position: relative; min-width: 0; }
+#map { height: 520px; border: 0; background: #0b1120; }
+#weather-map { height: 520px; border: 0; background: #0b1120; }
+.leaflet-container { background: #070b14 !important; font-family: Inter, sans-serif; }
+.leaflet-tile { filter: brightness(0.85) contrast(1.05); }
+.leaflet-control-attribution { background: rgba(7,11,20,0.7) !important; color: #6b7896 !important; }
+.leaflet-control-attribution a { color: var(--cyan) !important; }
+.leaflet-control-zoom a { background: var(--panel) !important; color: var(--text) !important; border-color: var(--line) !important; }
+.leaflet-control-zoom a:hover { background: #1e293b !important; }
+.area-label {
+  background: rgba(7,11,20,0.85);
+  border: 1px solid rgba(0,229,255,0.4);
+  color: var(--text);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  box-shadow: 0 0 12px -2px rgba(0,229,255,0.3);
+  font-family: "JetBrains Mono", monospace;
+}
+.area-label .sub { color: var(--cyan); font-size: 9px; opacity: 0.82; }
+.airport-pin { background: var(--cyan); width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 0 2px rgba(0,229,255,0.25), 0 0 12px 2px rgba(0,229,255,0.5); }
+.area-dot { position: relative; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; }
+.area-dot-core { width: 8px; height: 8px; background: var(--cyan); border-radius: 50%; box-shadow: 0 0 0 2px rgba(0,229,255,0.25), 0 0 16px 4px rgba(0,229,255,0.55); z-index: 2; }
+.area-dot-ring { position: absolute; inset: 18px; border: 1px solid rgba(0,229,255,0.35); border-radius: 50%; animation: ringPulse 2.4s ease-out infinite; }
+.area-dot.missing .area-dot-core { background: var(--pink); box-shadow: 0 0 0 2px rgba(255,77,157,0.25), 0 0 16px 4px rgba(255,77,157,0.4); }
+.area-dot.missing .area-dot-ring { border-color: rgba(255,77,157,0.42); }
+.area-dot-code { position: absolute; top: 50%; left: calc(50% + 10px); transform: translateY(-50%); font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; color: var(--text); background: rgba(7,11,20,0.7); padding: 2px 6px; border-radius: 3px; border: 1px solid rgba(0,229,255,0.3); white-space: nowrap; }
+@keyframes ringPulse {
+  0% { transform: scale(0.6); opacity: 0.9; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+/* live weather chips (Meteocons) layered over each air control area */
+.wx-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; background: rgba(7,11,20,0.82); border: 1px solid rgba(0,229,255,0.4); border-radius: 11px; white-space: nowrap; box-shadow: 0 6px 16px -5px rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
+.wx-chip.mini { padding: 2px; gap: 0; border-radius: 50%; border-color: rgba(0,229,255,0.3); }
+.wx-chip.vertical { flex-direction: column; gap: 2px; padding: 7px 9px; border-radius: 13px; }
+.wx-chip .wx-cond { width: 40px; height: 40px; display: block; }
+.wx-chip.mini .wx-cond { width: 32px; height: 32px; }
+.wx-chip.vertical .wx-cond { width: 44px; height: 44px; }
+.wx-chip .wx-beaufort { width: 30px; height: 30px; opacity: 0.95; }
+.wx-chip.vertical .wx-beaufort { width: 34px; height: 34px; }
+.wx-meta { display: flex; flex-direction: column; line-height: 1.18; font-family: "JetBrains Mono", monospace; }
+.wx-temp { font-family: "JetBrains Mono", monospace; font-size: 12px; font-weight: 700; color: var(--cyan); }
+.wx-chip.vertical .wx-temp { font-size: 14px; }
+.wx-speed { font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 600; color: var(--muted); }
+.wx-wind { display: flex; align-items: center; gap: 3px; font-family: "JetBrains Mono", monospace; font-size: 10px; color: var(--muted); }
+.wx-arrow { display: inline-block; color: #7B61FF; font-size: 13px; transform-origin: 50% 50%; transition: transform 0.4s ease; }
+.zoom-tier { position: absolute; top: 12px; left: 12px; z-index: 400; display: flex; align-items: center; gap: 7px; padding: 8px 10px; border-radius: 7px; border: 1px solid var(--line-soft); background: rgba(16,24,39,0.78); backdrop-filter: blur(6px); font: 600 0.58rem "JetBrains Mono", monospace; letter-spacing: 0.16em; text-transform: uppercase; }
+.zoom-tier span { color: var(--muted-2); }
+.zoom-tier button { min-height: 24px; padding: 0 8px; border-color: var(--line-soft); color: var(--muted); background: rgba(12,18,32,0.8); font: inherit; letter-spacing: inherit; }
+.zoom-tier button.active { color: var(--cyan); border-color: rgba(0,229,255,0.38); background: rgba(0,229,255,0.12); }
+.map-panel { border-left: 1px solid rgba(58,70,100,0.35); background: rgba(12,18,32,0.52); }
+.map-panel header { padding: 13px 16px; border-bottom: 1px solid rgba(58,70,100,0.35); color: var(--muted); font: 600 0.65rem "JetBrains Mono", monospace; letter-spacing: 0.18em; text-transform: uppercase; }
+.map-panel header small { display: block; margin-top: 4px; color: var(--muted-2); font: 500 0.62rem Inter, sans-serif; letter-spacing: 0.02em; text-transform: none; }
+.map-area-btn { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 64px; border: 0; border-bottom: 1px solid rgba(58,70,100,0.25); border-radius: 0; background: transparent; text-align: left; color: var(--text); }
+.map-area-btn:hover { background: rgba(0,229,255,0.06); }
+.map-area-btn strong { display: block; color: var(--cyan); font: 700 0.78rem "JetBrains Mono", monospace; }
+.map-area-btn small { display: block; margin-top: 3px; color: var(--muted); font-size: 0.76rem; }
+.map-area-btn em { color: var(--muted-2); font: 600 0.65rem "JetBrains Mono", monospace; font-style: normal; white-space: nowrap; }
+.map-empty { padding: 18px; color: var(--muted-2); font-size: 0.84rem; }
+#routes-map { height: 640px; border: 0; background: #0b1120; }
+.route-filter-bar { display: flex; flex-wrap: wrap; gap: 5px; padding: 10px 16px; border-bottom: 1px solid rgba(58,70,100,0.35); background: rgba(7,11,20,0.4); }
+.route-filter-btn { padding: 2px 10px; border-radius: 10px; font: 600 0.62rem "JetBrains Mono", monospace; letter-spacing: 0.1em; text-transform: uppercase; border: 1px solid var(--line-soft); background: transparent; color: var(--muted-2); cursor: pointer; transition: all 0.15s; }
+.route-filter-btn:hover { border-color: var(--muted); color: var(--muted); }
+.route-filter-btn.active { background: rgba(0,229,255,0.1); border-color: var(--cyan); color: var(--cyan); }
+.route-list-scroll { overflow-y: auto; max-height: 552px; }
+.map-route-btn { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 56px; padding: 0 16px; border: 0; border-bottom: 1px solid rgba(58,70,100,0.25); border-left: 3px solid transparent; border-radius: 0; background: transparent; text-align: left; color: var(--text); cursor: pointer; transition: background 0.12s; }
+.map-route-btn:hover { background: rgba(255,255,255,0.03); }
+.map-route-btn .rn { font: 700 0.78rem "JetBrains Mono", monospace; letter-spacing: 0.06em; }
+.map-route-btn .rp { display: block; margin-top: 2px; color: var(--muted); font-size: 0.74rem; }
+.map-route-btn .rc { color: var(--muted-2); font: 500 0.62rem "JetBrains Mono", monospace; white-space: nowrap; }
+.route-active-dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--green); margin-right: 5px; vertical-align: 1px; }
+.map-route-row { display: flex; align-items: center; border-bottom: 1px solid rgba(58,70,100,0.25); border-left: 3px solid transparent; transition: opacity 0.15s, border-left-color 0.15s; }
+.map-route-row:hover { background: rgba(255,255,255,0.025); }
+.route-row-toggle { flex: 1; display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 14px; border: 0; background: transparent; text-align: left; color: var(--text); cursor: pointer; min-height: 52px; }
+.route-row-toggle:hover .rn { text-decoration: underline; }
+.rvis-dot { flex-shrink: 0; width: 10px; height: 10px; border-radius: 2px; border: 1.5px solid; transition: background 0.12s; }
+.route-row-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.route-row-focus { flex-shrink: 0; width: 32px; height: 32px; margin-right: 8px; border: 1px solid var(--line-soft); border-radius: 5px; background: transparent; color: var(--muted-2); font-size: 0.8rem; cursor: pointer; display: grid; place-items: center; transition: all 0.12s; }
+.route-row-focus:hover { background: rgba(255,255,255,0.06); color: var(--text); border-color: var(--muted); }
+.leaflet-popup-content-wrapper { background: var(--panel) !important; border: 1px solid var(--line) !important; box-shadow: 0 4px 20px rgba(0,0,0,0.55) !important; border-radius: 7px !important; color: var(--text) !important; }
+.leaflet-popup-tip { background: var(--panel) !important; }
+.leaflet-popup-close-button { color: var(--muted-2) !important; }
+.leaflet-popup-close-button:hover { color: var(--text) !important; }
+
+.areas-grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 18px; align-items: start; }
+table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+th, td { padding: 10px 8px; border-bottom: 1px solid rgba(39,50,77,0.7); text-align: left; }
+th { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.sortable-table th {
+  position: relative;
+  padding-right: 24px;
+  cursor: pointer;
+  user-select: none;
+}
+.sortable-table th:hover,
+.sortable-table th:focus-visible {
+  color: var(--text);
+  outline: none;
+}
+.sortable-table th::after {
+  content: "";
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  transform: translateY(-50%);
+}
+.sortable-table th.sort-asc::after {
+  opacity: 1;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 6px solid var(--cyan);
+}
+.sortable-table th.sort-desc::after {
+  opacity: 1;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 6px solid var(--cyan);
+}
+/* Backoffice table polish: distinct header band, zebra rows, hover highlight */
+.sortable-table thead th {
+  background: rgba(123,97,255,0.07);
+  border-bottom: 1px solid rgba(58,70,100,0.9);
+}
+.sortable-table thead th.sort-asc,
+.sortable-table thead th.sort-desc { color: var(--text); background: rgba(0,229,255,0.08); }
+.sortable-table tbody td { transition: background 120ms ease; }
+.sortable-table tbody tr:nth-child(even) td { background: rgba(148,163,184,0.045); }
+.sortable-table tbody tr:hover td { background: rgba(0,229,255,0.07); }
+.empty { color: var(--muted); text-align: center; padding: 28px; }
+
+.stack { display: grid; gap: 14px; }
+label span { display: block; margin-bottom: 6px; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; }
+input, select { width: 100%; height: 40px; padding: 0 11px; border: 1px solid var(--line); border-radius: 6px; background: rgba(7,11,20,0.72); color: var(--text); }
+textarea { width: 100%; min-height: 260px; padding: 11px; border: 1px solid var(--line); border-radius: 6px; background: rgba(7,11,20,0.72); color: var(--text); resize: vertical; }
+select { appearance: none; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(0,229,255,0.14); }
+button { min-height: 38px; border: 1px solid rgba(0,229,255,0.35); border-radius: 6px; padding: 0 14px; background: rgba(0,229,255,0.1); color: var(--text); cursor: pointer; }
+button[type="submit"], .login-card button, button.btn-primary { background: linear-gradient(90deg, var(--cyan), #7b61ff); color: var(--bg); border: none; font-weight: 700; }
+.refresh-action {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  color: var(--muted);
+  background: rgba(12,18,32,0.72);
+  border-color: var(--line-soft);
+  font: 600 0.72rem Inter, system-ui, sans-serif;
+  transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+.refresh-action svg { flex: 0 0 auto; width: 15px; height: 15px; }
+.refresh-action .refresh-text { white-space: nowrap; }
+.refresh-action:hover,
+.refresh-action:focus-visible {
+  color: var(--cyan);
+  border-color: rgba(0,229,255,0.45);
+  background: rgba(0,229,255,0.08);
+  outline: none;
+}
+.refresh-action.htmx-request svg { animation: refresh-spin 0.7s linear infinite; }
+@keyframes refresh-spin { to { transform: rotate(360deg); } }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.form-section { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px 14px; background: rgba(7,11,20,0.35); }
+.form-section > legend { padding: 0 6px; color: var(--cyan); font: 700 0.7rem Inter, system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.1em; }
+.form-section .form-grid { margin-top: 4px; }
+.form-section > label + .form-grid, .form-section > .form-grid + label { margin-top: 12px; }
+.form-section .field-note { margin: 6px 0 0; color: var(--muted); }
+.field-note { margin-top: 6px; font-size: 0.78rem; }
+.field-note.ok { color: var(--green); }
+.field-note.error { color: var(--red); }
+.alert { border-radius: 6px; padding: 10px 12px; margin-bottom: 12px; font-size: 0.86rem; }
+.alert.ok { border: 1px solid rgba(62,230,168,0.35); background: rgba(62,230,168,0.1); color: var(--green); }
+.alert.error { border: 1px solid rgba(251,113,133,0.35); background: rgba(251,113,133,0.1); color: var(--red); }
+.weather-area-list { display: grid; gap: 8px; }
+.weather-area-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 54px; padding: 10px 12px; border: 1px solid rgba(58,70,100,0.42); border-radius: 7px; background: rgba(12,18,32,0.42); }
+.weather-area-row strong { display: block; color: var(--cyan); }
+.weather-area-row small { display: block; margin-top: 3px; color: var(--muted); }
+.weather-area-row em { color: var(--muted-2); font: 600 0.68rem "JetBrains Mono", monospace; font-style: normal; white-space: nowrap; }
+.weather-area-row.missing { border-color: rgba(255,77,157,0.3); background: rgba(255,77,157,0.055); }
+.weather-area-row.missing strong, .weather-area-row.missing em { color: var(--pink); }
+.weather-area-row.covered { border-color: rgba(62,230,168,0.32); background: rgba(62,230,168,0.05); }
+.weather-area-row.covered em { color: var(--green); }
+.weather-area-row.outside { border-color: rgba(123,97,255,0.3); background: rgba(123,97,255,0.05); }
+.weather-area-row.outside em { color: #b9a8ff; }
+.coverage-window { display: block; margin-top: 3px; color: var(--muted-2); font: 600 0.66rem "JetBrains Mono", monospace; }
+.weather-live-meteo { color: rgba(0,229,255,0.82) !important; }
+.weather-import-result strong { display: block; margin-bottom: 6px; }
+.weather-import-errors { margin: 8px 0 0; padding-left: 18px; color: var(--muted); }
+.weather-import-errors li { margin-top: 4px; }
+.csv-tools { display: grid; gap: 10px; }
+.csv-drop-zone { display: grid; gap: 4px; padding: 16px; border: 1px dashed rgba(0,229,255,0.42); border-radius: 8px; background: rgba(0,229,255,0.055); color: var(--muted); cursor: default; }
+.csv-drop-zone strong { color: var(--text); font-size: 0.9rem; }
+.csv-drop-zone span { font-size: 0.78rem; }
+.csv-drop-zone.drag-over { border-color: var(--cyan); background: rgba(0,229,255,0.13); box-shadow: inset 0 0 0 1px rgba(0,229,255,0.22); }
+.csv-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.csv-toolbar button { min-height: 32px; background: rgba(12,18,32,0.72); border-color: var(--line-soft); color: var(--muted); }
+.csv-toolbar button:hover { color: var(--cyan); border-color: rgba(0,229,255,0.45); }
+.source-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 2px; }
+.source-option { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; min-height: 98px; padding: 16px 12px; border: 1px solid var(--line-soft); border-radius: 10px; background: rgba(12,18,32,0.55); color: var(--muted); cursor: pointer; transition: border-color .15s ease, color .15s ease, background .15s ease; }
+.source-option:hover { color: var(--text); border-color: rgba(0,229,255,0.45); }
+.source-option.active { color: var(--text); border-color: var(--cyan); background: rgba(0,229,255,0.10); box-shadow: inset 0 0 0 1px rgba(0,229,255,0.25); }
+.source-option .source-icon { width: 30px; height: 32px; color: var(--cyan); }
+.source-option .openmeteo-mark { width: 42px; height: 30px; }
+.source-label { font-size: 0.82rem; font-weight: 600; }
+.import-section { display: grid; gap: 10px; }
+
+/* Pilot Operations: shared "My Flights & Plans" panel */
+.flight-filter-bar { display: grid; grid-template-columns: minmax(0, 1fr) 150px 150px; gap: 8px; margin: 2px 0 12px; }
+.flight-filter-bar input, .flight-filter-bar select { height: 36px; font-size: 0.82rem; }
+/* Plan-state badges — simulation-report palette: draft pink, validated amber, tested green */
+.plan-badge { display: inline-flex; align-items: center; gap: 7px; font: 600 0.68rem "JetBrains Mono", ui-monospace, monospace; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap; }
+.plan-badge::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; }
+.plan-draft { color: var(--pink); }
+.plan-validated { color: var(--amber); }
+.plan-tested { color: var(--green); }
+
+/* Pilot dashboard: plan-lifecycle board (DRAFT → VALIDATED → TESTED) */
+.lifecycle-board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 4px; }
+.lifecycle-col { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid var(--line-soft); border-radius: 8px; background: rgba(7,11,20,0.35); }
+.lifecycle-head { display: flex; align-items: center; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid rgba(58,70,100,0.4); }
+.lifecycle-head em { font: 600 0.9rem "JetBrains Mono", ui-monospace, monospace; font-style: normal; color: var(--muted); }
+.lifecycle-card { padding: 10px 12px; border: 1px solid var(--line-soft); border-left-width: 3px; border-radius: 6px; background: rgba(12,18,32,0.55); transition: border-color 0.15s, background 0.15s; }
+.lifecycle-card:hover { background: rgba(0,229,255,0.05); border-color: rgba(0,229,255,0.4); }
+.lifecycle-col:nth-child(1) .lifecycle-card { border-left-color: var(--pink); }
+.lifecycle-col:nth-child(2) .lifecycle-card { border-left-color: var(--amber); }
+.lifecycle-col:nth-child(3) .lifecycle-card { border-left-color: var(--green); }
+.lifecycle-route { font-size: 0.95rem; color: var(--text); font-weight: 600; }
+.lifecycle-meta { display: flex; justify-content: space-between; gap: 10px; margin-top: 5px; font-size: 0.72rem; color: var(--muted); }
+.lifecycle-empty { padding: 14px 4px; color: var(--muted-2); font-size: 0.78rem; text-align: center; }
+@media (max-width: 880px) { .lifecycle-board { grid-template-columns: 1fr; } }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.module-placeholder { max-width: 760px; min-height: 220px; display: flex; align-items: center; }
+.module-placeholder h2 { margin: 8px 0; font-size: 1.35rem; }
+.module-placeholder p { max-width: 620px; color: var(--muted); line-height: 1.6; }
+
+.login-shell { display: grid; place-items: center; padding: 28px; position: relative; }
+.login-layout { display: grid; grid-template-columns: minmax(0, 520px) 380px; gap: 42px; width: min(100%, 980px); align-items: center; }
+.login-context h1 { font-size: 3rem; line-height: 1.04; margin: 16px 0; }
+.brand-mark {
+  width: 132px;
+  height: 132px;
+  object-fit: contain;
+  display: block;
+  margin-bottom: 18px;
+  background: transparent !important;
+  border-radius: 0;
+  box-shadow: none;
+}
+.login-brand-wordmark {
+  color: var(--text);
+  font: 400 2rem Inter, system-ui, sans-serif;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  margin-bottom: 24px;
+}
+.login-brand-wordmark i { color: var(--pink); font-style: normal; }
+.entity-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+.entity-row span { border: 1px solid var(--line-soft); border-radius: 7px; padding: 10px 12px; color: var(--muted); background: rgba(16,24,39,0.44); font: 600 0.72rem "JetBrains Mono", monospace; letter-spacing: 0.08em; text-transform: uppercase; }
+.login-card { background: rgba(16,24,39,0.92); border: 1px solid var(--line); border-radius: 10px; padding: 24px; position: relative; z-index: 1; }
+.login-card h2 { font-size: 1.5rem; margin-bottom: 6px; }
+
+@media (max-width: 1100px) {
+  .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .grid-two, .areas-grid, .login-layout { grid-template-columns: 1fr; }
+  .map-shell { grid-template-columns: 1fr; }
+  .map-panel { border-left: 0; border-top: 1px solid rgba(58,70,100,0.35); }
+  .sidebar, .brand { width: 210px; }
+}
+
+@media (max-width: 760px) {
+  .layout { display: block; }
+  .sidebar { position: static; width: auto; min-height: 0; }
+  .brand { width: auto; border-right: none; }
+  .topbar { gap: 8px; }
+  .module-switcher summary { min-width: 190px; max-width: 42vw; }
+  .module-menu { width: min(330px, 82vw); }
+  .role { display: none; }
+  .content { padding: 18px; }
+  .kpi-grid { grid-template-columns: 1fr; }
+}

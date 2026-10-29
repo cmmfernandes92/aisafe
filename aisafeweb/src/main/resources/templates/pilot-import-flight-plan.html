@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AISafe - Import Flight Plan</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260609-pilot-flights">
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar('import-flight-plan', ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Pilot Operations</p>
+          <h1>Import Flight Plan</h1>
+          <p class="page-copy">
+            Import a Flight DSL file into one of your existing flights. The file is
+            validated (lexical, syntactic and semantic analysis) before use.
+            Importing into a DRAFT flight promotes it to VALIDATED; importing into an
+            already-VALIDATED flight supersedes it — the previous plan drops back to DRAFT.
+          </p>
+        </div>
+      </header>
+
+      <section class="areas-grid">
+        <article th:replace="~{fragments/pilot-flights :: panel(${flights}, ${planStatuses})}"></article>
+
+        <aside class="card form-card">
+          <div class="card-head">
+            <h2>Import Flight Plan</h2>
+          </div>
+          <div id="form-result"></div>
+          <form id="plan-import-form" hx-post="/modules/pilot-operations/import-flight-plan"
+                hx-target="#form-result" hx-swap="innerHTML" class="stack">
+            <input type="hidden" name="fileName" id="plan-file-name" value="plan.flight">
+
+            <label>
+              <span>Target flight (DRAFT or VALIDATED)</span>
+              <select name="flightKey" required>
+                <option value="">Select a flight</option>
+                <option th:each="f : ${importFlights}"
+                        th:value="${f.route() + '|' + f.departureDate()}"
+                        th:text="|${f.route()} · ${f.departure()} · ${f.aircraft()} · ${f.planStatus()}|">FR401 · 2026-06-12 13:00 · CS-MNB · VALIDATED</option>
+              </select>
+              <p class="field-note" th:if="${#lists.isEmpty(importFlights)}">
+                You have no DRAFT or VALIDATED flight. Create a flight first.
+              </p>
+            </label>
+
+            <div class="csv-tools">
+              <div id="plan-drop-zone" class="csv-drop-zone" role="button" tabindex="0">
+                <strong th:text="|Drop flight plan file here (${supportedFormats})|">Drop flight plan file here (*.flight)</strong>
+                <span>or choose a file / paste its contents below.</span>
+              </div>
+              <div class="csv-toolbar">
+                <input type="file" id="plan-file-input" hidden>
+                <button type="button" id="pick-plan-button">Choose file</button>
+                <button type="button" id="paste-plan-button">Paste from clipboard</button>
+                <span id="plan-file-note" class="field-note">no file loaded</span>
+              </div>
+            </div>
+
+            <label>
+              <span>Flight DSL Content</span>
+              <textarea id="plan-content" name="dslContent" required spellcheck="false" class="mono"
+                        placeholder="flight FR401 {&#10;  type: regular&#10;  route: LPPR -> LPPT&#10;  …&#10;}"></textarea>
+            </label>
+
+            <button type="submit">Validate &amp; Import</button>
+          </form>
+        </aside>
+      </section>
+    </main>
+  </div>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/sortable-table.js"></script>
+  <script src="/js/pilot-flights.js"></script>
+  <script src="/js/flight-plan-import.js"></script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+@startuml ssd-us073
+skinparam actorStyle awesome
+
+actor "Air Transport Company\nCollaborator" as atcc
+participant ":AISafe System" as sys
+
+activate atcc
+
+atcc -> sys : createFlightRoute(routeName, originAirportCode, destinationAirportCode)
+activate sys
+
+note right of sys
+  routeName: 2-letter company initials + up to 4 digits (e.g. "TP123")
+  originAirportCode: ICAO or IATA code
+  destinationAirportCode: ICAO or IATA code
+end note
+
+sys --> atcc : confirms inputs received
+
+sys -> sys : validate routeName format
+activate sys
+deactivate sys
+sys -> sys : check routeName uniqueness
+activate sys
+deactivate sys
+sys -> sys : resolve originAirport from code
+activate sys
+deactivate sys
+sys -> sys : resolve destinationAirport from code
+activate sys
+deactivate sys
+sys -> sys : verify origin ≠ destination
+activate sys
+deactivate sys
+sys -> sys : create FlightRoute aggregate
+activate sys
+deactivate sys
+sys -> sys : persist FlightRoute
+activate sys
+deactivate sys
+
+sys --> atcc : "Flight route [routeName] created successfully"
+deactivate sys
+
+deactivate atcc
+
+@enduml

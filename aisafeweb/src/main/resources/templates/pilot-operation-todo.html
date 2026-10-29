@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title th:text="'AISafe - ' + ${pageTitle}">AISafe - Pilot Operations</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="/css/app.css?v=20260606-pilot-nav">
+</head>
+<body class="app-shell">
+  <div th:replace="~{layout :: topbar(${username}, ${currentModule}, ${modules})}"></div>
+  <div class="layout">
+    <div th:replace="~{layout :: sidebar(${activePage}, ${currentModule}, ${navItems})}"></div>
+
+    <main class="content">
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Pilot Operations</p>
+          <h1 th:text="${pageTitle}">Pilot Operation</h1>
+          <p class="page-copy" th:text="${pageDescription}">
+            Pending implementation.
+          </p>
+        </div>
+      </header>
+
+      <section class="areas-grid">
+        <article th:replace="~{fragments/pilot-flights :: panel(${flights}, ${planStatuses})}"></article>
+
+        <aside class="card module-placeholder">
+          <div>
+            <p class="eyebrow">Pending Implementation</p>
+            <h2>TODO</h2>
+            <p>
+              This Pilot Operations page is wired into the shell and navigation.
+              Domain/controller integration is still pending.
+            </p>
+          </div>
+        </aside>
+      </section>
+    </main>
+  </div>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/sortable-table.js"></script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+@startuml
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+autonumber
+
+title Configure a Simulation Run (US100 — Sprint 1)
+
+actor "Flight Control\nOperator" as FCO
+participant ":ConfigureSimulationUI" as UI <<presentation>>
+participant ":ConfigureSimulationController" as CTRL <<application>>
+participant ":AirControlAreaRepository" as ACAR <<persistence>>
+participant ":FlightRepository" as FR <<persistence>>
+participant ":WeatherDataRepository" as WDR <<persistence>>
+participant ":SimulationRun" as SR <<domain>>
+participant ":SimulationRunRepository" as SRR <<persistence>>
+
+activate FCO
+
+FCO -> UI : asks to configure\na simulation
+activate UI
+
+UI -> CTRL : create()
+activate CTRL
+
+CTRL -> ACAR : findAll()
+activate ACAR
+ACAR --> CTRL : airControlAreas
+deactivate ACAR
+
+CTRL --> UI : airControlAreas
+
+UI --> FCO : shows available areas
+deactivate UI
+
+FCO -> UI : selects air control area
+activate UI
+
+UI -> CTRL : loadFlightsAndWeather(areaCode)
+
+CTRL -> FR : findByArea(areaCode)
+activate FR
+FR --> CTRL : flights
+deactivate FR
+
+CTRL -> WDR : findByArea(areaCode)
+activate WDR
+WDR --> CTRL : weatherData
+deactivate WDR
+
+CTRL --> UI : flights, weatherData
+
+UI --> FCO : shows available flights\nand weather data
+deactivate UI
+
+FCO -> UI : selects flights, time range,\nsafety threshold,\nperformance settings
+activate UI
+
+UI -> CTRL : createSimulationRun(areaCode,\nflightIds, weatherDataId,\ntimeRange, safetyThreshold,\nperformanceSettings)
+
+CTRL -> SR ** : create(area, flights,\nweatherData, timeRange,\nsafetyThreshold,\nperformanceSettings)
+note right of SR
+  Validates (Information Expert):
+  - at least one flight selected
+  - timeRange start < end
+  - safetyThreshold > 0
+  Status set to CREATED
+end note
+
+CTRL -> SRR : save(simulationRun)
+activate SRR
+SRR --> CTRL : simulationRun
+deactivate SRR
+
+CTRL --> UI : simulationRun
+deactivate CTRL
+
+UI --> FCO : shows configured simulation\n(status: CREATED)
+deactivate UI
+
+deactivate FCO
+
+note right of FCO
+  Sprint 1 ends here. In Sprint 2, the system sends
+  the SimulationRun configuration to the SCOMP module
+  (external C process) and receives a report with results,
+  which are then stored in SimulationResult/SafetyViolation.
+end note
+
+@enduml

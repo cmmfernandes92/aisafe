@@ -1,0 +1,17 @@
+<tbody th:fragment="rows(collaborators)" id="collaborators-tbody">
+  <tr th:each="collaborator : ${collaborators}">
+    <td class="mono" th:text="${collaborator.email()}">fco@aisafe.test</td>
+    <td th:text="${collaborator.type()}">Area</td>
+    <td th:text="${collaborator.position()}">Flight Control Operator</td>
+    <td>
+      <span class="mono" th:text="${collaborator.assignmentCode()}">LPPC</span>
+      <span th:text="${collaborator.assignmentName()}">Lisboa FIR</span>
+    </td>
+    <td class="mono" th:text="${collaborator.contactEmail()}">fco@aisafe.test</td>
+    <td class="mono" th:text="${collaborator.contactPhoneNumber()}">+351910000000</td>
+    <td class="mono" th:text="${collaborator.status()}">ACTIVE</td>
+  </tr>
+  <tr th:if="${#lists.isEmpty(collaborators)}">
+    <td colspan="7" class="empty">No collaborators registered.</td>
+  </tr>
+</tbody>

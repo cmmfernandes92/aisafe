@@ -1,0 +1,76 @@
+@startuml us072_domain_model_excerpt
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+left to right direction
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>> #95A5A6
+    FontColor<<external>> #1A1A1A
+}
+
+' ============================================
+' AGGREGATE: Aircraft (queried by this US)
+' ============================================
+package "Aircraft Aggregate" {
+    class Aircraft <<aggregate root>> {
+        + identity() : Registration
+        + status() : OperationalStatus
+    }
+    class Registration <<value object>>
+    class CabinConfiguration <<value object>> {
+        + totalSeats() : int
+    }
+    enum OperationalStatus <<enum>> {
+        ACTIVE
+        RETIRED
+    }
+
+    Aircraft *-- Registration
+    Aircraft *-- CabinConfiguration
+    Aircraft *-- OperationalStatus
+}
+
+' ============================================
+' EXTERNAL AGGREGATES (reference only, grey)
+' ============================================
+package "AirTransportCompany Aggregate" #EEEEEE {
+    class AirTransportCompany <<aggregate root>> <<external>>
+}
+
+package "CompanyCollaborator Aggregate" #EEEEEE {
+    class CompanyCollaborator <<aggregate root>> <<external>>
+}
+
+package "AircraftModel Aggregate" #EEEEEE {
+    class AircraftModel <<aggregate root>> <<external>>
+}
+
+package "Maker Aggregate" #EEEEEE {
+    class Maker <<aggregate root>> <<external>>
+}
+
+' ============================================
+' CROSS-AGGREGATE RELATIONSHIPS
+' ============================================
+Aircraft --> AirTransportCompany : belongs to
+Aircraft --> AircraftModel : is of model
+
+AircraftModel --> Maker : manufactured by
+
+CompanyCollaborator --> AirTransportCompany : belongs to
+note on link
+  Resolved from authenticated
+  session to scope listing
+  to own company only
+end note
+
+@enduml

@@ -1,0 +1,28 @@
+@startuml
+skinparam actorStyle awesome
+
+actor Pilot
+participant ":AISafe System" as System
+
+activate Pilot
+
+Pilot -> System : requestCreateFlightPlan()
+activate System
+System --> Pilot : show selectable routes
+deactivate System
+
+Pilot -> System : selectRoute(route)
+activate System
+System --> Pilot : show company aircraft + pilots
+deactivate System
+
+Pilot -> System : provideFlightData(aircraft, departureDateTime, pilot)
+activate System
+System --> Pilot : request confirmation
+deactivate System
+
+Pilot -> System : confirm()
+activate System
+System --> Pilot : flight plan created (status = DRAFT)
+deactivate System
+@enduml

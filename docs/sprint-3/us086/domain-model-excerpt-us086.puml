@@ -1,0 +1,32 @@
+@startuml domain-model-excerpt-us086
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 13
+skinparam roundcorner 8
+skinparam classBackgroundColor #FEFEFE
+skinparam classBorderColor #AAAAAA
+
+note as N
+  US086 adds no new domain concepts.
+  It provides a TCP transport layer that
+  exposes the existing Pilot domain
+  to remote clients.
+end note
+
+class "SystemUser\n(PILOT role)" as User <<Aggregate Root>> #DDDDDD {
+    - identity : Username
+    - roles : Set<Role>
+}
+
+class "PilotConnectionHandler\n(TCP Infrastructure)" as H #EEEEEE {
+    authenticates as PILOT
+    dispatches commands
+}
+
+class "Pilot Domain\n(Flight, FlightPlan,\nWeatherAssignment...)" as Domain <<existing>> #DDDDDD {
+}
+
+User --> H : "authenticated session"
+H --> Domain : "delegates to existing\napplication controllers"
+
+@enduml

@@ -1,0 +1,134 @@
+@startuml sd-us086
+skinparam actorStyle awesome
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+autonumber
+
+title US086 – Pilot Remote Access (realization)
+
+actor "Pilot" as A
+participant ":PilotRemoteClient" as CLIENT <<presentation>>
+participant ":PilotTcpServer" as SERVER <<infrastructure>>
+participant ":PilotConnectionHandler" as HANDLER <<infrastructure>>
+participant ":AuthenticationCredentialHandler" as AUTH <<infrastructure>>
+participant ":DefaultPilotSessionContext" as SESSION <<infrastructure>>
+participant ":<<existing use-case>>\nController" as CTRL <<application>>
+
+activate SERVER
+note right of SERVER : ServerSocket listening on TcpProtocol.PORT (5555)
+
+activate A
+
+A -> CLIENT : main(host, port)
+activate CLIENT
+note right of CLIENT
+  US086.1 – dedicated TCP client
+  US086.2 – no direct DB access
+end note
+
+CLIENT -> SERVER : new Socket(host, port)
+
+SERVER -> HANDLER : new PilotConnectionHandler(clientSocket)
+activate HANDLER
+SERVER -> SERVER : new Thread(handler).start()
+deactivate SERVER
+
+note over SERVER, CLIENT : TCP handshake complete; per-connection handler thread
+
+CLIENT -> HANDLER : writeByte(LOGIN)\nwriteString(username)\nwriteString(password)
+
+HANDLER -> AUTH : authenticated(username, password, AisafeRoles.PILOT)
+activate AUTH
+AUTH --> HANDLER : true / false
+deactivate AUTH
+note right of HANDLER : US086.4 – only PILOT role admitted
+
+alt credentials valid AND role == PILOT
+    HANDLER --> CLIENT : writeByte(RESPONSE_OK)
+    CLIENT --> A : "Login successful"
+
+    loop while command != LOGOUT
+        A -> CLIENT : choose pilot operation
+        CLIENT -> HANDLER : writeByte(commandCode)\nwriteString(args)
+        note right of CLIENT : US086.3 – all Pilot USs remotely available
+
+        HANDLER -> HANDLER : dispatch(commandCode, in, out)
+
+        alt CREATE_FLIGHT_PLAN (US080)
+            HANDLER -> SESSION : createFlight(route, departure, registration)
+            activate SESSION
+            SESSION -> CTRL : delegates to CreateFlightController
+            activate CTRL
+            CTRL --> SESSION : Flight
+            deactivate CTRL
+            SESSION --> HANDLER : Flight
+            deactivate SESSION
+            HANDLER --> CLIENT : RESPONSE_DATA + flightId
+        else CREATE_FROM_DSL (US081)
+            HANDLER -> SESSION : importPlanFromDsl(flightId, dslContent)
+            activate SESSION
+            SESSION -> CTRL : delegates to ImportFlightPlanController
+            activate CTRL
+            CTRL --> SESSION : Flight
+            deactivate CTRL
+            SESSION --> HANDLER : Flight
+            deactivate SESSION
+            HANDLER --> CLIENT : RESPONSE_DATA + plan status
+        else INSERT_WEATHER (US082)
+            HANDLER -> SESSION : attachWeather(flightId, assignments)
+            activate SESSION
+            SESSION -> CTRL : delegates to AttachWeatherToPlanController
+            activate CTRL
+            CTRL --> SESSION : void
+            deactivate CTRL
+            SESSION --> HANDLER : void
+            deactivate SESSION
+            HANDLER --> CLIENT : RESPONSE_OK
+        else VALIDATE_FLIGHT_PLAN (US085)
+            HANDLER -> SESSION : validateFlightPlan(flightId)
+            activate SESSION
+            SESSION -> CTRL : delegates to TestFlightPlanController
+            activate CTRL
+            CTRL --> SESSION : FlightPlanTestResult
+            deactivate CTRL
+            SESSION --> HANDLER : result
+            deactivate SESSION
+            HANDLER --> CLIENT : RESPONSE_DATA + success:message
+        else LIST_FLIGHTS (read-only)
+            HANDLER -> SESSION : flightsOfAuthenticatedPilot()
+            activate SESSION
+            SESSION --> HANDLER : Iterable<Flight>
+            deactivate SESSION
+            HANDLER --> CLIENT : RESPONSE_DATA + flights
+        else LIST_WEATHER (read-only)
+            HANDLER -> SESSION : allWeatherData()
+            activate SESSION
+            SESSION --> HANDLER : Iterable<WeatherData>
+            deactivate SESSION
+            HANDLER --> CLIENT : RESPONSE_DATA + weather list
+        else unknown command
+            HANDLER --> CLIENT : RESPONSE_ERROR + "Unknown command"
+        end
+
+        CLIENT --> A : display result
+    end
+
+    A -> CLIENT : logout
+    CLIENT -> HANDLER : writeByte(LOGOUT)
+    HANDLER --> CLIENT : writeByte(RESPONSE_OK)
+    HANDLER -> HANDLER : socket.close()
+    deactivate HANDLER
+
+    CLIENT --> A : "Session ended"
+    deactivate CLIENT
+else invalid credentials or wrong role
+    HANDLER --> CLIENT : writeByte(RESPONSE_ERROR) + "Unauthorized"
+    HANDLER -> HANDLER : socket.close()
+    deactivate HANDLER
+    CLIENT --> A : "Login failed"
+    deactivate CLIENT
+end
+
+deactivate A
+
+@enduml

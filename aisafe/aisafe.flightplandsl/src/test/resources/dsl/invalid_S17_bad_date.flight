@@ -1,0 +1,18 @@
+// Calendar date is invalid, even though it matches the datetime token shape.
+flight TP134 {
+  type: regular
+  route { origin: LPPT destination: LFPG }
+  leg 1 {
+    departure { airport: LPPT datetime: 2026-02-30T08:00 }
+    arrival { airport: LFPG datetime: 2026-03-01T11:45 }
+    fuel: 8500 kg
+    segments {
+      segment {
+        start: (38.78, -9.13)
+        end: (48.99, 2.55)
+        slots { slot { altitude: 10000 m width: 500 m } }
+        wind { direction: 270 speed: 15.5 m/s }
+      }
+    }
+  }
+}

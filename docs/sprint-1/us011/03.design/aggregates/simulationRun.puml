@@ -1,0 +1,54 @@
+@startuml
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+
+package "SimulationRun Aggregate" {
+    class SimulationRun <<aggregate root>> {
+        simulationID
+        safetyThreshold
+    }
+    class TimeRange <<value object>>
+    class PerformanceSettings <<value object>>
+    class SimulationResult <<entity>>
+    class SafetyViolation <<entity>> {
+        violationTimestamp
+    }
+    class ViolationPosition <<value object>>
+    enum SimulationStatus <<enum>> {
+        CREATED
+        RUNNING
+        COMPLETED
+        FAILED
+    }
+    enum ValidationOutcome <<enum>> {
+        PASS
+        FAIL
+    }
+
+    SimulationRun *-- TimeRange
+    SimulationRun *-- SimulationStatus
+    SimulationRun *-- PerformanceSettings
+    SimulationRun *-- "0..1" SimulationResult
+
+    SimulationResult *-- ValidationOutcome
+    SimulationResult *-- "0..*" SafetyViolation
+
+    SafetyViolation *-- ViolationPosition
+}
+
+' Cross-aggregate references
+class Flight <<aggregate root>> #White
+class WeatherData <<aggregate root>> #White
+
+SimulationRun --> WeatherData : uses weather
+SimulationRun --> "1..*" Flight : includes flights
+
+@enduml

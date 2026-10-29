@@ -1,0 +1,34 @@
+@startuml ssd-us082
+skinparam actorStyle awesome
+autonumber
+
+title US082 - Attach Weather to Flight Plan (system sequence diagram)
+
+actor "Pilot" as Pilot
+participant ":AISafe System" as System
+
+activate Pilot
+
+Pilot -> System : requestFlightPlans()
+activate System
+System --> Pilot : listOfFlightPlans
+deactivate System
+
+Pilot -> System : selectFlightPlan(flightId)
+activate System
+System --> Pilot : planSegments + registeredWeatherForecasts
+deactivate System
+
+Pilot -> System : attachWeather(flightId, weatherMap)
+activate System
+
+alt valid request
+  System --> Pilot : confirmation(success)
+else invalid request
+  System --> Pilot : error(message)
+end
+
+deactivate System
+deactivate Pilot
+
+@enduml

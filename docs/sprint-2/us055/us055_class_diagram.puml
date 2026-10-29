@@ -1,0 +1,123 @@
+@startuml us055-implementation
+title US055 - Register Aircraft Model Class Diagram
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+
+skinparam class {
+    BackgroundColor<<external>> #EAEDED
+    BorderColor<<external>> #95A5A6
+    FontColor<<external>> #1A1A1A
+}
+
+' ============================================
+' PRESENTATION
+' ============================================
+package "Presentation" {
+    class RegisterAircraftModelUI {
+        + doShow() : boolean
+        + headline() : String
+    }
+}
+
+' ============================================
+' APPLICATION
+' ============================================
+package "Application" {
+    class RegisterAircraftModelController <<UseCaseController>> {
+        + register(name, maker, type, motType, emptyWeight,\n  mtow, mzfw, maxFuel, ceiling, cruiseSpeed,\n  wingArea, cd0, cl, maxRange, engines) : AircraftModel
+        + listMakers() : Iterable<Maker>
+        + listEngineModels() : Iterable<EngineModel>
+        + modelNameExists(name, maker) : boolean
+    }
+}
+
+' ============================================
+' DOMAIN
+' ============================================
+package "Domain" {
+    class AircraftModel <<aggregate root>> {
+        - emptyWeight : double
+        - mtow : double
+        - mzfw : double
+        - maxFuelCapacity : double
+        - serviceCeiling : double
+        - cruiseSpeed : double
+        - wingArea : double
+        - dragCoefficient : double
+        - liftCoefficient : double
+        - maximumRange : double
+        + identity() : AircraftModelName
+        + addCertifiedEngine(EngineModel) : void
+        + certifiedEngines() : Set<EngineModel>
+    }
+    class AircraftModelName <<value object>> {
+        - value : String
+        + valueOf(String) : AircraftModelName
+    }
+    enum AircraftType <<enum>> {
+        PASSENGER
+        CARGO
+        MIXED
+    }
+    interface AircraftModelRepository {
+        + findByNameAndMaker(AircraftModelName, Maker) : Optional<AircraftModel>
+        + save(AircraftModel) : AircraftModel
+    }
+}
+
+' ============================================
+' PERSISTENCE
+' ============================================
+package "Persistence" {
+    class JpaAircraftModelRepository
+    class InMemoryAircraftModelRepository
+}
+
+' ============================================
+' BOOTSTRAP
+' ============================================
+package "Bootstrap" {
+    class AircraftModelBootstrapper {
+        + execute() : boolean
+    }
+}
+
+' ============================================
+' EXTERNAL (referenced, not modified)
+' ============================================
+class Maker <<external>> #EAEDED
+class EngineModel <<external>> #EAEDED
+class MotorizationType <<external>> #EAEDED
+interface MakerRepository <<external>> #EAEDED
+interface EngineModelRepository <<external>> #EAEDED
+
+' ============================================
+' Relationships
+' ============================================
+RegisterAircraftModelUI ..> RegisterAircraftModelController : uses
+
+RegisterAircraftModelController ..> AircraftModelRepository : queries & saves
+RegisterAircraftModelController ..> MakerRepository : queries
+RegisterAircraftModelController ..> EngineModelRepository : queries
+RegisterAircraftModelController ..> AircraftModel : creates
+
+AircraftModel *-- AircraftModelName : identity
+AircraftModel *-- AircraftType
+AircraftModel --> Maker : manufacturer
+AircraftModel --> EngineModel : certifiedEngines 1..*
+AircraftModel --> MotorizationType
+
+JpaAircraftModelRepository ..|> AircraftModelRepository
+InMemoryAircraftModelRepository ..|> AircraftModelRepository
+
+AircraftModelBootstrapper ..> RegisterAircraftModelController : uses
+
+@enduml

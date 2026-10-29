@@ -1,0 +1,96 @@
+@startuml us060-implementation
+title US060 - Register Air Transport Company Class Diagram
+
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #D6EAF8
+skinparam classBorderColor #5B9BD5
+skinparam classFontColor #1A1A1A
+skinparam packageStyle rectangle
+skinparam packageBackgroundColor transparent
+skinparam packageBorderColor #888888
+skinparam defaultFontSize 11
+hide empty members
+
+' ============================================
+' PRESENTATION
+' ============================================
+package "Presentation" {
+    class RegisterAirTransportCompanyUI {
+        + doShow() : boolean
+        + headline() : String
+    }
+}
+
+' ============================================
+' APPLICATION
+' ============================================
+package "Application" {
+    class RegisterAirTransportCompanyController <<UseCaseController>> {
+        + register(iataCode, icaoCode, name) : AirTransportCompany
+        + iataCodeExists(iataCode) : boolean
+        + icaoCodeExists(icaoCode) : boolean
+    }
+}
+
+' ============================================
+' DOMAIN
+' ============================================
+package "Domain" {
+    class AirTransportCompany <<aggregate root>> {
+        - companyName : String
+        + identity() : CompanyIATACode
+        + icaoCode() : CompanyICAOCode
+        + companyName() : String
+        + sameAs(Object) : boolean
+    }
+    class CompanyIATACode <<value object>> {
+        - value : String
+        + valueOf(String) : CompanyIATACode
+        + value() : String
+    }
+    class CompanyICAOCode <<value object>> {
+        - value : String
+        + valueOf(String) : CompanyICAOCode
+        + value() : String
+    }
+    interface AirTransportCompanyRepository {
+        + findByIataCode(CompanyIATACode) : Optional<AirTransportCompany>
+        + findByIcaoCode(CompanyICAOCode) : Optional<AirTransportCompany>
+        + save(AirTransportCompany) : AirTransportCompany
+    }
+}
+
+' ============================================
+' PERSISTENCE
+' ============================================
+package "Persistence" {
+    class JpaAirTransportCompanyRepository
+    class InMemoryAirTransportCompanyRepository
+}
+
+' ============================================
+' BOOTSTRAP
+' ============================================
+package "Bootstrap" {
+    class AirTransportCompanyBootstrapper {
+        + execute() : boolean
+    }
+}
+
+' ============================================
+' Relationships
+' ============================================
+RegisterAirTransportCompanyUI ..> RegisterAirTransportCompanyController : uses
+
+RegisterAirTransportCompanyController ..> AirTransportCompanyRepository : queries & saves
+RegisterAirTransportCompanyController ..> AirTransportCompany : creates
+
+AirTransportCompany *-- CompanyIATACode : identity
+AirTransportCompany *-- CompanyICAOCode
+
+JpaAirTransportCompanyRepository ..|> AirTransportCompanyRepository
+InMemoryAirTransportCompanyRepository ..|> AirTransportCompanyRepository
+
+AirTransportCompanyBootstrapper ..> RegisterAirTransportCompanyController : uses
+
+@enduml

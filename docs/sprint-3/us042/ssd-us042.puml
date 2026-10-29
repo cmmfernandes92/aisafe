@@ -1,0 +1,36 @@
+@startuml ssd-us042
+skinparam actorStyle awesome
+
+actor "Weather Person" as WP
+participant ":AISafe System" as System
+
+activate WP
+
+WP -> System : requestImportWeatherData()
+activate System
+System --> WP : show existing air control areas + supported sources (CSV file, Open-Meteo API)
+deactivate System
+
+WP -> System : selectTargetArea(area)
+activate System
+System --> WP : ask for source type and its input
+deactivate System
+
+WP -> System : provideSource(sourceType, input = file or day/time window)
+activate System
+System --> WP : request confirmation (preview record count)
+deactivate System
+
+WP -> System : confirm()
+activate System
+note right of System
+  Read source (parse the file, or grid the
+  area box and sample the API) -> records.
+  Per record: build & validate;
+  skip + collect invalid rows,
+  persist valid ones (one batch).
+end note
+System --> WP : import report (imported = N, skipped = M, reasons)
+deactivate System
+
+@enduml
